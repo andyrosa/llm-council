@@ -8,9 +8,17 @@ from typing import List, Dict, Any
 import uuid
 import json
 import asyncio
+import sys
 
 from . import storage
 from .council import run_full_council, generate_conversation_title, stage1_collect_responses, stage2_collect_rankings, stage3_synthesize_final, calculate_aggregate_rankings
+from .config import OPENROUTER_API_KEY
+
+if OPENROUTER_API_KEY:
+    print("OPENROUTER_API_KEY found")
+else:
+    print("OPENROUTER_API_KEY not found; quitting")
+    sys.exit(1)
 
 app = FastAPI(title="LLM Council API")
 

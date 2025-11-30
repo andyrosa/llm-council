@@ -67,13 +67,58 @@ export const api = {
   },
 
   /**
+   * Get all available models with their enabled status.
+   */
+  async getModels() {
+    const response = await fetch(`${API_BASE}/api/models`);
+    if (!response.ok) {
+      throw new Error('Failed to get models');
+    }
+    return response.json();
+  },
+
+  /**
+   * Toggle a model's enabled status.
+   */
+  async toggleModel(model, enabled) {
+    const response = await fetch(`${API_BASE}/api/models/toggle`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ model, enabled }),
+    });
+    if (!response.ok) {
+      throw new Error('Failed to toggle model');
+    }
+    return response.json();
+  },
+
+  /**
+   * Set which model acts as the judge/chairman.
+   */
+  async setChairman(model) {
+    const response = await fetch(`${API_BASE}/api/models/chairman`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ model }),
+    });
+    if (!response.ok) {
+      throw new Error('Failed to set judge');
+    }
+    return response.json();
+  },
+
+  /**
    * Send a message and receive streaming updates.
    * @param {string} conversationId - The conversation ID
    * @param {string} content - The message content
    * @param {function} onEvent - Callback function for each event: (eventType, data) => void
    * @returns {Promise<void>}
    */
-  async sendMessageStream(conversationId, content, onEvent) {
+  async sendMessageStream(conversationId, content, webSearch, onEvent) {
     const response = await fetch(
       `${API_BASE}/api/conversations/${conversationId}/message/stream`,
       {
@@ -81,7 +126,7 @@ export const api = {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ content }),
+        body: JSON.stringify({ content, web_search: webSearch }),
       }
     );
 

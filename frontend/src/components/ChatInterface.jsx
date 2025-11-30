@@ -11,7 +11,28 @@ export default function ChatInterface({
   isLoading,
 }) {
   const [input, setInput] = useState('');
+  const [webSearchMode, setWebSearchMode] = useState('auto'); // 'auto' | 'on' | 'off'
+  const [webSearchAnimating, setWebSearchAnimating] = useState(false);
   const messagesEndRef = useRef(null);
+
+  const hasWebSearchWord = /\b(search|today|recent|news)\b/i.test(input);
+  const autoWebSearchDetected = webSearchMode === 'auto' && hasWebSearchWord;
+  const webSearchEnabled = webSearchMode === 'on' || autoWebSearchDetected;
+
+  // Animate when auto-detection triggers web search
+  useEffect(() => {
+    // Avoid calling setState synchronously inside the effect (which can
+    // trigger cascading renders). Schedule the animation start asynchronously
+    // so the update does not happen during the render/effect phase.
+    if (webSearchMode === 'auto' && hasWebSearchWord) {
+      const startTimer = setTimeout(() => setWebSearchAnimating(true), 0);
+      const stopTimer = setTimeout(() => setWebSearchAnimating(false), 600);
+      return () => {
+        clearTimeout(startTimer);
+        clearTimeout(stopTimer);
+      };
+    }
+  }, [hasWebSearchWord, webSearchMode]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -21,11 +42,22 @@ export default function ChatInterface({
     scrollToBottom();
   }, [conversation]);
 
+  const handleWebSearchToggle = () => {
+    if (webSearchMode === 'auto') {
+      setWebSearchMode('on');
+    } else if (webSearchMode === 'on') {
+      setWebSearchMode('off');
+    } else {
+      setWebSearchMode('auto');
+    }
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
     if (input.trim() && !isLoading) {
-      onSendMessage(input);
+      onSendMessage(input, webSearchEnabled);
       setInput('');
+      setWebSearchMode('auto');
     }
   };
 
@@ -131,13 +163,24 @@ export default function ChatInterface({
             disabled={isLoading}
             rows={3}
           />
-          <button
-            type="submit"
-            className="send-button"
-            disabled={!input.trim() || isLoading}
-          >
-            Send
-          </button>
+          <div className="input-actions">
+            <label
+              className={`web-search-toggle ${webSearchAnimating ? 'animating' : ''} ${webSearchEnabled ? 'enabled' : ''}`}
+              onClick={handleWebSearchToggle}
+            >
+              <span className={`web-search-indicator ${webSearchEnabled ? 'on' : 'off'}`} />
+              <span className="web-search-label">
+                Web {webSearchMode === 'auto' ? '(auto)' : webSearchMode === 'on' ? 'on' : 'off'}
+              </span>
+            </label>
+            <button
+              type="submit"
+              className="send-button"
+              disabled={!input.trim() || isLoading}
+            >
+              Send
+            </button>
+          </div>
         </form>
       )}
     </div>

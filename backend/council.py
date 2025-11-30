@@ -1,8 +1,21 @@
 """3-stage LLM Council orchestration."""
 
+import json
+import os
 from typing import List, Dict, Any, Tuple
 from .openrouter import query_models_parallel, query_model
 from .config import get_council_models_active, get_active_chairman_model, get_browse_capable_models
+
+CHAIRMAN_INSTRUCTIONS_PATH = os.path.join(os.path.dirname(__file__), "..", "data", "chairman_instructions.json")
+
+
+def load_chairman_prompt_override() -> str:
+    """Load chairman prompt override from JSON file. Returns empty string if not present."""
+    if not os.path.exists(CHAIRMAN_INSTRUCTIONS_PATH):
+        return ""
+    with open(CHAIRMAN_INSTRUCTIONS_PATH, "r", encoding="utf-8") as handle:
+        data = json.load(handle)
+    return data.get("prompt", "")
 
 
 async def stage1_collect_responses(user_query: str, web_search: bool = False) -> List[Dict[str, Any]]:
@@ -147,7 +160,15 @@ async def stage3_synthesize_final(
         for result in stage2_results
     ])
 
-    chairman_prompt = f"""You are the Chairman of an LLM Council. Multiple AI models have provided responses to a user's question, and then ranked each other's responses.
+    prompt_override = load_chairman_prompt_override()
+    if prompt_override:
+        chairman_prompt = prompt_override.format(
+            user_query=user_query,
+            stage1_text=stage1_text,
+            stage2_text=stage2_text
+        )
+    else:
+        chairman_prompt = f"""You are the Chairman of an LLM Council. Multiple AI models have provided responses to a user's question, and then ranked each other's responses.
 
 Original Question: {user_query}
 

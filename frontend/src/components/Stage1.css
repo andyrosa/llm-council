@@ -52,11 +52,22 @@
   border: 1px solid #e0e0e0;
 }
 
+.model-header {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
 .model-name {
   color: #888;
   font-size: 12px;
-  margin-bottom: 12px;
   font-family: monospace;
+}
+
+.model-stats-inline {
+  color: #666;
+  font-size: 12px;
 }
 
 .response-text {

@@ -13,7 +13,7 @@ async def stage1_collect_responses(user_query: str) -> List[Dict[str, Any]]:
         user_query: The user's question
 
     Returns:
-        List of dicts with 'model' and 'response' keys
+        List of dicts with 'model', 'response', 'elapsed_time', 'usage', and 'cost' keys
     """
     messages = [{"role": "user", "content": user_query}]
 
@@ -26,7 +26,10 @@ async def stage1_collect_responses(user_query: str) -> List[Dict[str, Any]]:
         if response is not None:  # Only include successful responses
             stage1_results.append({
                 "model": model,
-                "response": response.get('content', '')
+                "response": response.get('content', ''),
+                "elapsed_time": response.get('elapsed_time'),
+                "usage": response.get('usage'),
+                "cost": response.get('cost'),
             })
 
     return stage1_results
@@ -106,7 +109,9 @@ Now provide your evaluation and ranking:"""
             stage2_results.append({
                 "model": model,
                 "ranking": full_text,
-                "parsed_ranking": parsed
+                "parsed_ranking": parsed,
+                "elapsed_time": response.get('elapsed_time'),
+                "cost": response.get('cost'),
             })
 
     return stage2_results, label_to_model
@@ -170,7 +175,9 @@ Provide a clear, well-reasoned final answer that represents the council's collec
 
     return {
         "model": CHAIRMAN_MODEL,
-        "response": response.get('content', '')
+        "response": response.get('content', ''),
+        "elapsed_time": response.get('elapsed_time'),
+        "cost": response.get('cost'),
     }
 
 
@@ -197,7 +204,12 @@ def parse_ranking_from_text(ranking_text: str) -> List[str]:
             numbered_matches = re.findall(r'\d+\.\s*Response [A-Z]', ranking_section)
             if numbered_matches:
                 # Extract just the "Response X" part
-                return [re.search(r'Response [A-Z]', m).group() for m in numbered_matches]
+                result = []
+                for m in numbered_matches:
+                    match = re.search(r'Response [A-Z]', m)
+                    if match:
+                        result.append(match.group())
+                return result
 
             # Fallback: Extract all "Response X" patterns in order
             matches = re.findall(r'Response [A-Z]', ranking_section)

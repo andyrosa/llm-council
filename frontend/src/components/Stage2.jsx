@@ -4,6 +4,7 @@ import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
 import 'katex/dist/katex.min.css';
 import { convertLatexDelimiters } from '../utils/latex';
+import { formatStats } from '../utils/stats';
 import './Stage2.css';
 
 function deAnonymizeText(text, labelToModel) {
@@ -25,6 +26,9 @@ export default function Stage2({ rankings, labelToModel, aggregateRankings }) {
     return null;
   }
 
+  const activeRanking = rankings[activeTab];
+  const stats = formatStats(activeRanking.elapsed_time, activeRanking.cost);
+
   return (
     <div className="stage stage2">
       <h3 className="stage-title">Stage 2: Peer Rankings</h3>
@@ -38,6 +42,7 @@ export default function Stage2({ rankings, labelToModel, aggregateRankings }) {
       <div className="tabs">
         {rankings.map((rank, index) => (
           <button
+            type="button"
             key={index}
             className={`tab ${activeTab === index ? 'active' : ''}`}
             onClick={() => setActiveTab(index)}
@@ -48,21 +53,22 @@ export default function Stage2({ rankings, labelToModel, aggregateRankings }) {
       </div>
 
       <div className="tab-content">
-        <div className="ranking-model">
-          {rankings[activeTab].model}
+        <div className="model-header">
+          <span className="ranking-model">{activeRanking.model}</span>
+          {stats && <span className="model-stats-inline">{stats}</span>}
         </div>
         <div className="ranking-content markdown-content">
           <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>
-            {convertLatexDelimiters(deAnonymizeText(rankings[activeTab].ranking, labelToModel))}
+            {convertLatexDelimiters(deAnonymizeText(activeRanking.ranking, labelToModel))}
           </ReactMarkdown>
         </div>
 
-        {rankings[activeTab].parsed_ranking &&
-         rankings[activeTab].parsed_ranking.length > 0 && (
+        {activeRanking.parsed_ranking &&
+         activeRanking.parsed_ranking.length > 0 && (
           <div className="parsed-ranking">
             <strong>Extracted Ranking:</strong>
             <ol>
-              {rankings[activeTab].parsed_ranking.map((label, i) => (
+              {activeRanking.parsed_ranking.map((label, i) => (
                 <li key={i}>
                   {labelToModel && labelToModel[label]
                     ? labelToModel[label].split('/')[1] || labelToModel[label]

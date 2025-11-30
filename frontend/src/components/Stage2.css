@@ -2,6 +2,18 @@
   background: #fafafa;
 }
 
+.model-header {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.model-stats-inline {
+  color: #666;
+  font-size: 12px;
+}
+
 .stage2 h4 {
   margin: 20px 0 8px 0;
   color: #333;

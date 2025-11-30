@@ -4,6 +4,7 @@ import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
 import 'katex/dist/katex.min.css';
 import { convertLatexDelimiters } from '../utils/latex';
+import { formatStats } from '../utils/stats';
 import './Stage1.css';
 
 export default function Stage1({ responses }) {
@@ -12,6 +13,9 @@ export default function Stage1({ responses }) {
   if (!responses || responses.length === 0) {
     return null;
   }
+
+  const activeResponse = responses[activeTab];
+  const stats = formatStats(activeResponse.elapsed_time, activeResponse.cost);
 
   return (
     <div className="stage stage1">
@@ -31,10 +35,13 @@ export default function Stage1({ responses }) {
       </div>
 
       <div className="tab-content">
-        <div className="model-name">{responses[activeTab].model}</div>
+        <div className="model-header">
+          <span className="model-name">{activeResponse.model}</span>
+          {stats && <span className="model-stats-inline">{stats}</span>}
+        </div>
         <div className="response-text markdown-content">
           <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>
-            {convertLatexDelimiters(responses[activeTab].response)}
+            {convertLatexDelimiters(activeResponse.response)}
           </ReactMarkdown>
         </div>
       </div>

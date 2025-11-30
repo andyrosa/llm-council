@@ -232,12 +232,15 @@ async def get_models():
     active_chairman = get_active_chairman_model(model_state)
     notes = {}
     browse_capable_models = set()
+    expensive_models = set()
     for entry in registry_entries:
         model_id = entry.get("id")
         if not isinstance(model_id, str):
             continue
         if entry.get("notes"):
             notes[model_id] = entry["notes"]
+        if entry.get("expensive"):
+            expensive_models.add(model_id)
         capabilities = entry.get("capabilities") or {}
         if isinstance(capabilities, dict):
             can_browse = capabilities.get("can_browse")
@@ -266,6 +269,7 @@ async def get_models():
             "enabled": enabled,
             "is_base": is_base,
             "can_browse": model in browse_capable_models,
+            "expensive": model in expensive_models,
             "is_chairman": model == active_chairman,
         }
         if model in notes:

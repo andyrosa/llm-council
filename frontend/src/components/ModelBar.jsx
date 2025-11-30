@@ -67,7 +67,7 @@ function ModelBar() {
 
   return (
     <div className="model-bar">
-      {models.map(({ model, enabled, notes, can_browse: canBrowse, is_chairman: isChairman }) => (
+      {models.map(({ model, enabled, notes, expensive, can_browse: canBrowse, is_chairman: isChairman }) => (
         <button
           type="button"
           key={model}
@@ -83,6 +83,16 @@ function ModelBar() {
               title="Acts as chairman"
             >
               ⚖
+            </span>
+          )}
+          {expensive && (
+            <span
+              className="model-expensive-icon"
+              role="img"
+              aria-label="Expensive model"
+              title="Expensive"
+            >
+              💰
             </span>
           )}
           {canBrowse && (

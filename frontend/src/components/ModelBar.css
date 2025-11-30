@@ -99,3 +99,18 @@
 .model-toggle.disabled .model-chairman-icon {
   color: #9ca3af;
 }
+
+.model-expensive-icon {
+  font-size: 15px;
+  line-height: 1;
+  margin-right: 4px;
+  color: #dc2626;
+}
+
+.model-toggle.enabled .model-expensive-icon {
+  color: #fca5a5;
+}
+
+.model-toggle.disabled .model-expensive-icon {
+  color: #9ca3af;
+}

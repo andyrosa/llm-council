@@ -102,11 +102,77 @@
 
 .input-form {
   display: flex;
-  align-items: flex-end;
+  flex-direction: column;
   gap: 12px;
   padding: 24px;
   border-top: 1px solid #e0e0e0;
   background: #fafafa;
+}
+
+.input-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.web-search-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: #f0f0f0;
+  border: 1px solid #d0d0d0;
+  border-radius: 6px;
+  cursor: pointer;
+  -webkit-user-select: none;
+  user-select: none;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.web-search-toggle:hover {
+  background: #e8e8e8;
+}
+
+.web-search-toggle.enabled {
+  background: #e8f4e8;
+  border-color: #4a9e4a;
+}
+
+.web-search-toggle.animating {
+  animation: web-search-attention 0.6s ease-out;
+}
+
+@keyframes web-search-attention {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(74, 158, 74, 0.5);
+  }
+  30% {
+    transform: scale(1.05);
+    box-shadow: 0 0 0 8px rgba(74, 158, 74, 0.2);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(74, 158, 74, 0);
+  }
+}
+
+.web-search-indicator {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #ccc;
+  transition: background 0.2s;
+}
+
+.web-search-indicator.on {
+  background: #4a9e4a;
+}
+
+.web-search-label {
+  font-size: 13px;
+  color: #666;
 }
 
 .message-input {

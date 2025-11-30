@@ -2,23 +2,26 @@
 
 from typing import List, Dict, Any, Tuple
 from .openrouter import query_models_parallel, query_model
-from .config import get_council_models_active, get_active_chairman_model
+from .config import get_council_models_active, get_active_chairman_model, get_browse_capable_models
 
 
-async def stage1_collect_responses(user_query: str) -> List[Dict[str, Any]]:
+async def stage1_collect_responses(user_query: str, web_search: bool = False) -> List[Dict[str, Any]]:
     """
     Stage 1: Collect individual responses from all council models.
 
     Args:
         user_query: The user's question
+        web_search: Whether to enable web search
 
     Returns:
         List of dicts with 'model', 'response', 'elapsed_time', 'usage', and 'cost' keys
     """
     messages = [{"role": "user", "content": user_query}]
+    models = get_council_models_active()
+    browse_capable = get_browse_capable_models() if web_search else None
 
     # Query all models in parallel
-    responses = await query_models_parallel(get_council_models_active(), messages)
+    responses = await query_models_parallel(models, messages, web_search=web_search, web_search_models=browse_capable)
 
     # Format results
     stage1_results = []

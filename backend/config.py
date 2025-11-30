@@ -98,6 +98,22 @@ def save_model_registry(entries: List[ModelRegistryEntry]) -> None:
         json.dump(payload, handle, indent=2)
 
 
+def get_browse_capable_models() -> set:
+    """Return set of model IDs that have web search capability."""
+    registry_entries = load_model_registry()
+    browse_capable = set()
+    for entry in registry_entries:
+        model_id = entry.get("id")
+        if not isinstance(model_id, str):
+            continue
+        capabilities = entry.get("capabilities") or {}
+        if isinstance(capabilities, dict):
+            can_browse = capabilities.get("can_browse") or capabilities.get("web_search")
+            if can_browse:
+                browse_capable.add(model_id)
+    return browse_capable
+
+
 def get_all_models():
     """Return all available models: base council list plus any additions."""
     _ensure_unique_models(COUNCIL_MODELS, "COUNCIL_MODELS")

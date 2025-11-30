@@ -12,7 +12,17 @@ import sys
 
 from . import storage
 from .council import run_full_council, generate_conversation_title, stage1_collect_responses, stage2_collect_rankings, stage3_synthesize_final, calculate_aggregate_rankings
-from .config import OPENROUTER_API_KEY
+from .config import (
+    OPENROUTER_API_KEY,
+    COUNCIL_MODELS,
+    get_all_models,
+    load_model_registry,
+    save_model_registry,
+    load_model_state,
+    save_model_state,
+    get_active_chairman_model,
+    ModelRegistryEntry,
+)
 
 if OPENROUTER_API_KEY:
     print("OPENROUTER_API_KEY found")
@@ -40,6 +50,18 @@ class CreateConversationRequest(BaseModel):
 class SendMessageRequest(BaseModel):
     """Request to send a message in a conversation."""
     content: str
+    web_search: bool = False
+
+
+class ModelToggleRequest(BaseModel):
+    """Request to toggle a model's enabled state."""
+    model: str
+    enabled: bool
+
+
+class ModelChairmanRequest(BaseModel):
+    """Request to set the current chairman model."""
+    model: str
 
 
 class ConversationMetadata(BaseModel):
@@ -200,6 +222,140 @@ async def send_message_stream(conversation_id: str, request: SendMessageRequest)
             "Connection": "keep-alive",
         }
     )
+
+
+@app.get("/api/models")
+async def get_models():
+    """Get all models with their enabled state and notes."""
+    registry_entries = load_model_registry()
+    model_state = load_model_state()
+    active_chairman = get_active_chairman_model(model_state)
+    notes = {}
+    browse_capable_models = set()
+    for entry in registry_entries:
+        model_id = entry.get("id")
+        if not isinstance(model_id, str):
+            continue
+        if entry.get("notes"):
+            notes[model_id] = entry["notes"]
+        capabilities = entry.get("capabilities") or {}
+        if isinstance(capabilities, dict):
+            can_browse = capabilities.get("can_browse")
+            if can_browse is None:
+                can_browse = capabilities.get("web_search")
+            if can_browse:
+                browse_capable_models.add(model_id)
+    models_state = model_state.get("models") if isinstance(model_state, dict) else {}
+
+    all_models = get_all_models()
+
+    result = []
+    for model in sorted(all_models):
+        is_base = model in COUNCIL_MODELS
+
+        enabled = True
+        if isinstance(models_state, dict):
+            state_entry = models_state.get(model)
+            if isinstance(state_entry, dict):
+                enabled = bool(state_entry.get("enabled", True))
+            elif isinstance(state_entry, bool):
+                enabled = state_entry
+
+        entry = {
+            "model": model,
+            "enabled": enabled,
+            "is_base": is_base,
+            "can_browse": model in browse_capable_models,
+            "is_chairman": model == active_chairman,
+        }
+        if model in notes:
+            entry["notes"] = notes[model]
+
+        result.append(entry)
+
+    return result
+
+
+@app.post("/api/models/toggle")
+async def toggle_model(request: ModelToggleRequest):
+    """Toggle a model's enabled state."""
+    state = load_model_state()
+    models_state = state.get("models")
+    if not isinstance(models_state, dict):
+        models_state = {}
+        state["models"] = models_state
+    entry = models_state.get(request.model, {"enabled": True})
+    if not isinstance(entry, dict):
+        entry = {"enabled": bool(entry)}
+    entry["enabled"] = request.enabled
+    models_state[request.model] = entry
+    save_model_state(state)
+    return {"success": True}
+
+
+@app.post("/api/models/chairman")
+async def set_chairman_model(request: ModelChairmanRequest):
+    """Set which model acts as chairman."""
+    model = request.model
+    if model not in get_all_models():
+        raise HTTPException(status_code=400, detail="Unknown model")
+
+    state = load_model_state()
+    state["chairman"] = model
+    models_state = state.get("models")
+    if not isinstance(models_state, dict):
+        models_state = {}
+        state["models"] = models_state
+    if model not in models_state:
+        models_state[model] = {"enabled": True}
+    save_model_state(state)
+    return {"success": True}
+
+
+@app.post("/api/models/add")
+async def add_model(request: Dict[str, str]):
+    """Add a new model to the available list."""
+    model = request.get("model", "").strip()
+    if not model:
+        raise HTTPException(status_code=400, detail="Model name required")
+
+    registry_entries = load_model_registry()
+    if any(entry.get("id") == model for entry in registry_entries):
+        raise HTTPException(status_code=400, detail="Model already exists in model_registry.json")
+
+    can_browse_value = request.get("can_browse")
+    if not isinstance(can_browse_value, bool):
+        legacy_value = request.get("has_news")
+        can_browse_value = legacy_value if isinstance(legacy_value, bool) else False
+
+    entry: ModelRegistryEntry = {
+        "id": model,
+        "notes": None,
+        "expensive": None,
+        "capabilities": {},
+    }
+    notes_value = request.get("notes")
+    if isinstance(notes_value, str) and notes_value.strip():
+        entry["notes"] = notes_value.strip()
+    if can_browse_value:
+        entry["capabilities"] = {"can_browse": True}
+
+    registry_entries.append(entry)
+    save_model_registry(registry_entries)
+
+    state = load_model_state()
+    models_state = state.get("models")
+    if not isinstance(models_state, dict):
+        models_state = {}
+        state["models"] = models_state
+    entry_state = models_state.get(model, {"enabled": True})
+    if not isinstance(entry_state, dict):
+        entry_state = {"enabled": bool(entry_state)}
+    entry_state["enabled"] = True
+    models_state[model] = entry_state
+    save_model_state(state)
+
+    return {"success": True}
 
 
 if __name__ == "__main__":

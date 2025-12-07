@@ -54,7 +54,10 @@
   margin-bottom: 4px;
   border-radius: 6px;
   cursor: pointer;
-  transition: background 0.2s;
+  transition: background 0.2s, border-color 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .conversation-item:hover {
@@ -75,4 +78,29 @@
 .conversation-meta {
   color: #999;
   font-size: 12px;
+}
+
+.conversation-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.delete-conversation-btn {
+  border: none;
+  background: transparent;
+  color: #999;
+  font-size: 16px;
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: 4px;
+  transition: background 0.15s, color 0.15s;
+}
+
+.delete-conversation-btn:hover {
+  background: #ffecec;
+  color: #c62828;
+}
+
+.conversation-item.active .delete-conversation-btn {
+  color: #555;
 }

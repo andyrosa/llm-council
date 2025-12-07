@@ -20,3 +20,4 @@ data/model_state.json
 frontend/node_modules/
 frontend/dist/
 frontend/.vite/
+conversation_stats.png

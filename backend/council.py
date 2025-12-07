@@ -36,17 +36,45 @@ async def stage1_collect_responses(user_query: str, web_search: bool = False) ->
     # Query all models in parallel
     responses = await query_models_parallel(models, messages, web_search=web_search, web_search_models=browse_capable)
 
-    # Format results
+    # Retry once for models that did not respond
+    failed_models = [model for model, response in responses.items() if response is None]
+    retry_responses = {}
+    if failed_models:
+        retry_responses = await query_models_parallel(failed_models, messages, web_search=web_search, web_search_models=browse_capable)
+
+    # Format results in original model order; keep first-attempt placeholder, add retry only if it responded
     stage1_results = []
-    for model, response in responses.items():
-        if response is not None:  # Only include successful responses
+    for model in models:
+        first_response = responses.get(model)
+        second_response = retry_responses.get(model)
+
+        if first_response is not None:
             stage1_results.append({
                 "model": model,
-                "response": response.get('content', ''),
-                "elapsed_time": response.get('elapsed_time'),
-                "usage": response.get('usage'),
-                "cost": response.get('cost'),
+                "response": first_response.get('content', ''),
+                "elapsed_time": first_response.get('elapsed_time'),
+                "usage": first_response.get('usage'),
+                "cost": first_response.get('cost'),
             })
+        else:
+            # First attempt failed; record placeholder
+            stage1_results.append({
+                "model": model,
+                "response": "No response. Might retry.",
+                "elapsed_time": None,
+                "usage": None,
+                "cost": None,
+            })
+
+            # Only store the retry if it produced content; annotate that it's the second attempt
+            if second_response is not None:
+                stage1_results.append({
+                    "model": model,
+                    "response": "Model did not reply on the first attempt. This is the second attempt\n" + second_response.get('content', ''),
+                    "elapsed_time": second_response.get('elapsed_time'),
+                    "usage": second_response.get('usage'),
+                    "cost": second_response.get('cost'),
+                })
 
     return stage1_results
 

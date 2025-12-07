@@ -275,7 +275,8 @@ def parse_ranking_from_text(ranking_text: str) -> List[str]:
 
 def calculate_aggregate_rankings(
     stage2_results: List[Dict[str, Any]],
-    label_to_model: Dict[str, str]
+    label_to_model: Dict[str, str],
+    stage1_results: List[Dict[str, Any]]
 ) -> List[Dict[str, Any]]:
     """
     Calculate aggregate rankings across all models.
@@ -292,8 +293,31 @@ def calculate_aggregate_rankings(
     # Track positions for each model
     model_positions = defaultdict(list)
 
+    # Track timing and cost per model from Stage 1 and Stage 2
+    stage1_time_cost = defaultdict(lambda: {"elapsed_time": 0.0, "cost": 0.0})
+    stage2_time_cost = defaultdict(lambda: {"elapsed_time": 0.0, "cost": 0.0})
+
+    for result in stage1_results:
+        model = result.get("model")
+        if model is None:
+            continue
+        elapsed = result.get("elapsed_time")
+        cost = result.get("cost")
+        if elapsed is not None:
+            stage1_time_cost[model]["elapsed_time"] += float(elapsed)
+        if cost is not None:
+            stage1_time_cost[model]["cost"] += float(cost)
+
     for ranking in stage2_results:
         ranking_text = ranking['ranking']
+        model = ranking.get('model')
+        if model is not None:
+            elapsed = ranking.get('elapsed_time')
+            cost = ranking.get('cost')
+            if elapsed is not None:
+                stage2_time_cost[model]["elapsed_time"] += float(elapsed)
+            if cost is not None:
+                stage2_time_cost[model]["cost"] += float(cost)
 
         # Parse the ranking from the structured format
         parsed_ranking = parse_ranking_from_text(ranking_text)
@@ -308,10 +332,14 @@ def calculate_aggregate_rankings(
     for model, positions in model_positions.items():
         if positions:
             avg_rank = sum(positions) / len(positions)
+            total_elapsed = stage1_time_cost[model]["elapsed_time"] + stage2_time_cost[model]["elapsed_time"]
+            total_cost = stage1_time_cost[model]["cost"] + stage2_time_cost[model]["cost"]
             aggregate.append({
                 "model": model,
                 "average_rank": round(avg_rank, 2),
-                "rankings_count": len(positions)
+                "rankings_count": len(positions),
+                "total_elapsed_time": round(total_elapsed, 2),
+                "total_cost": round(total_cost, 2),
             })
 
     # Sort by average rank (lower is better)
@@ -382,7 +410,7 @@ async def run_full_council(user_query: str) -> Tuple[List, List, Dict, Dict]:
     stage2_results, label_to_model = await stage2_collect_rankings(user_query, stage1_results)
 
     # Calculate aggregate rankings
-    aggregate_rankings = calculate_aggregate_rankings(stage2_results, label_to_model)
+    aggregate_rankings = calculate_aggregate_rankings(stage2_results, label_to_model, stage1_results)
 
     # Stage 3: Synthesize final answer
     stage3_result = await stage3_synthesize_final(

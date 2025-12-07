@@ -53,9 +53,8 @@
 }
 
 .aggregate-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
+  display: grid;
+  grid-template-columns: 60px 1fr 120px 120px 180px;
   padding: 10px;
   background: #ffffff;
   border-radius: 6px;
@@ -162,4 +161,48 @@
 .rank-count {
   color: #999;
   font-size: 12px;
+}
+
+.rank-stats {
+  color: #444;
+  font-size: 0.9rem;
+  text-align: right;
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
+  align-items: center;
+}
+
+.rank-stat {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.rank-stat-divider {
+  color: #999;
+}
+
+.stat-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.stat-green {
+  background: #207a3f;
+}
+
+.stat-yellow {
+  background: #b58900;
+}
+
+.stat-red {
+  background: #b22222;
+}
+
+.stat-text {
+  color: #444;
+  font-weight: 600;
 }

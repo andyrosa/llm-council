@@ -51,7 +51,10 @@ async def probe_model(model: str, actual_sha: str) -> dict:
 
 
 async def main():
-    models = [e["id"] for e in load_model_registry()]
+    # Allow optional single-model override via CLI
+    cli_model = sys.argv[1] if len(sys.argv) > 1 else None
+    models = [cli_model] if cli_model else [e["id"] for e in load_model_registry()]
+
     actual_sha = get_actual_sha()
     print(f"Actual: {actual_sha}\n")
     print(f"{'Model':<35} {'Result':<44} {'OK':<4} {'Time':>6}")

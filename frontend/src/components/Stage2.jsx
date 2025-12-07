@@ -22,6 +22,46 @@ function deAnonymizeText(text, labelToModel) {
 export default function Stage2({ rankings, labelToModel, aggregateRankings }) {
   const [activeTab, setActiveTab] = useState(0);
 
+  const costBaseline = aggregateRankings && aggregateRankings.length > 0
+    ? Math.min(...aggregateRankings.map((agg) => (agg.total_cost ?? Infinity)))
+    : Infinity;
+
+  const timeBaseline = aggregateRankings && aggregateRankings.length > 0
+    ? Math.min(...aggregateRankings.map((agg) => (agg.total_elapsed_time ?? Infinity)))
+    : Infinity;
+
+  const computeColor = (value, baseline) => {
+    if (value === null || value === undefined || !isFinite(value)) return '';
+    if (!isFinite(baseline)) return '';
+
+    // If baseline is zero, keep zero as green and use first non-zero as thresholds
+    if (baseline === 0) {
+      const nonZero = aggregateRankings
+        ?.map((agg) => valueKeySelector(agg, baseline === costBaseline ? 'total_cost' : 'total_elapsed_time'))
+        ?.filter((v) => v !== null && v !== undefined && isFinite(v) && v > 0);
+      const firstNonZero = nonZero && nonZero.length > 0 ? Math.min(...nonZero) : null;
+      if (value === 0) return 'green';
+      if (firstNonZero === null) return 'green';
+      const t1 = firstNonZero * 1.2;
+      const t2 = firstNonZero * 1.4;
+      if (value <= t1) return 'yellow';
+      if (value <= t2) return 'red';
+      return 'red';
+    }
+
+    const t1 = baseline * 1.2;
+    const t2 = baseline * 1.4;
+    if (value <= t1) return 'green';
+    if (value <= t2) return 'yellow';
+    return 'red';
+  };
+
+  // Selector helper used for zero-baseline logic
+  const valueKeySelector = (agg, key) => {
+    if (!agg) return undefined;
+    return agg[key];
+  };
+
   if (!rankings || rankings.length === 0) {
     return null;
   }
@@ -99,6 +139,25 @@ export default function Stage2({ rankings, labelToModel, aggregateRankings }) {
                 <span className="rank-count">
                   ({agg.rankings_count} votes)
                 </span>
+                {(agg.total_elapsed_time !== undefined || agg.total_cost !== undefined) && (
+                  <span className="rank-stats">
+                    {agg.total_elapsed_time !== undefined && agg.total_elapsed_time !== null && (
+                      <span className="rank-stat">
+                        <span className={`stat-dot stat-${computeColor(agg.total_elapsed_time, timeBaseline)}`} />
+                        <span className="stat-text">{`${agg.total_elapsed_time}s`}</span>
+                      </span>
+                    )}
+                    {agg.total_elapsed_time !== undefined && agg.total_elapsed_time !== null && agg.total_cost !== undefined && agg.total_cost !== null && (
+                      <span className="rank-stat-divider">·</span>
+                    )}
+                    {agg.total_cost !== undefined && agg.total_cost !== null && (
+                      <span className="rank-stat">
+                        <span className={`stat-dot stat-${computeColor(agg.total_cost, costBaseline)}`} />
+                        <span className="stat-text">{`$${agg.total_cost.toFixed(2)}`}</span>
+                      </span>
+                    )}
+                  </span>
+                )}
               </div>
             ))}
           </div>

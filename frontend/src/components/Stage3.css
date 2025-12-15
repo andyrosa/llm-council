@@ -34,3 +34,26 @@
   line-height: 1.7;
   font-size: 15px;
 }
+
+.stage-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.export-button {
+  background-color: #2d8a2d;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  transition: background-color 0.2s;
+}
+
+.export-button:hover {
+  background-color: #236b23;
+}

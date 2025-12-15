@@ -69,13 +69,17 @@ def _load_conversations(data_dir: str) -> List[Dict]:
     return conversations
 
 
+def _fig_to_base64(fig) -> str:
+    buf = io.BytesIO()
+    fig.savefig(buf, format="png", dpi=150)
+    return base64.b64encode(buf.getvalue()).decode("ascii")
+
+
 def _copy_image_to_clipboard(fig) -> bool:
     """Copy the figure image to the Windows clipboard without writing a file."""
 
     try:
-        buf = io.BytesIO()
-        fig.savefig(buf, format="png", dpi=150)
-        b64 = base64.b64encode(buf.getvalue()).decode("ascii")
+        b64 = _fig_to_base64(fig)
 
         ps_script = r"""
 $ErrorActionPreference = 'Stop'
@@ -257,10 +261,17 @@ def print_table(rows) -> None:
         )
 
 
-def plot_rows(rows, output_path: str, show: bool = False, convo_count: Optional[int] = None) -> None:
+def plot_rows(
+    rows,
+    output_path: str,
+    show: bool = False,
+    convo_count: Optional[int] = None,
+    print_base64: bool = False,
+) -> None:
     plt = _ensure_matplotlib()
     if plt is None:  # pragma: no cover - optional dependency
         return
+    from matplotlib.ticker import FuncFormatter  # type: ignore
     from matplotlib.widgets import Button  # type: ignore
 
     pct_delay = [(r[1], r[2], r[0]) for r in rows if r[1] is not None and r[2] is not None]
@@ -268,7 +279,8 @@ def plot_rows(rows, output_path: str, show: bool = False, convo_count: Optional[
         (r[1], r[3] * 100.0, r[0]) for r in rows if r[1] is not None and r[3] is not None
     ]
 
-    fig, axes = plt.subplots(1, 2, figsize=(12, 5), constrained_layout=True)
+    fig, axes = plt.subplots(1, 2, figsize=(12, 5))
+    fig.subplots_adjust(wspace=0.4, left=0.1, right=0.95, top=0.85, bottom=0.15)
     try:
         fig.canvas.manager.set_window_title("Conversation stats")  # type: ignore[attr-defined]
     except Exception:
@@ -284,8 +296,13 @@ def plot_rows(rows, output_path: str, show: bool = False, convo_count: Optional[
             axes[0].text(xi, yi, label, fontsize=8, ha="left", va="bottom")
         axes[0].set_xlabel("Average Percentile (lower is better)")
         axes[0].set_ylabel("Normalized Delay")
+        axes[0].set_yscale("log")
+        
+        axes[0].yaxis.set_major_formatter(FuncFormatter(lambda x, _: f"{x:.2g}"))
+        axes[0].yaxis.set_minor_formatter(FuncFormatter(lambda x, _: f"{x:.2g}"))
+
         axes[0].set_title("Delay vs. Percentile", pad=18)
-        axes[0].grid(True, alpha=0.2)
+        axes[0].grid(True, alpha=0.2, which="both")
     else:
         axes[0].set_title("No delay data")
 
@@ -296,8 +313,13 @@ def plot_rows(rows, output_path: str, show: bool = False, convo_count: Optional[
             axes[1].text(xi, yi, label, fontsize=8, ha="left", va="bottom")
         axes[1].set_xlabel("Average Percentile (lower is better)")
         axes[1].set_ylabel("Average Cost (cents)")
+        axes[1].set_yscale("log")
+
+        axes[1].yaxis.set_major_formatter(FuncFormatter(lambda x, _: f"{x:.2g}"))
+        axes[1].yaxis.set_minor_formatter(FuncFormatter(lambda x, _: f"{x:.2g}"))
+
         axes[1].set_title("Cost vs. Percentile (cents)", pad=18)
-        axes[1].grid(True, alpha=0.2)
+        axes[1].grid(True, alpha=0.2, which="both")
     else:
         axes[1].set_title("No cost data")
 
@@ -321,6 +343,12 @@ def plot_rows(rows, output_path: str, show: bool = False, convo_count: Optional[
         plt.savefig(output_path, dpi=150)
         print(f"Saved plot to {output_path}")
 
+    if print_base64:
+        b64 = _fig_to_base64(fig)
+        print("\n--- Markdown Image (Base64) ---")
+        print(f"![Conversation Stats](data:image/png;base64,{b64})")
+        print("-------------------------------")
+
     if show:
         plt.show()
 
@@ -328,7 +356,14 @@ def plot_rows(rows, output_path: str, show: bool = False, convo_count: Optional[
 def main() -> None:
     parser = argparse.ArgumentParser(description="Aggregate conversation stats")
     parser.add_argument("--no-plot", action="store_true", help="Skip saving delay/cost plot")
-    parser.add_argument("--show", action="store_true", help="Show plot window via matplotlib")
+    parser.add_argument(
+        "--no-show", action="store_true", help="Don't show plot window via matplotlib"
+    )
+    parser.add_argument(
+        "--base64",
+        action="store_true",
+        help="Print markdown image tag with base64 encoded plot",
+    )
     parser.add_argument(
         "--output", default="", help="Plot output path (leave empty to skip saving)"
     )
@@ -339,8 +374,14 @@ def main() -> None:
 
     print_table(rows)
 
-    if not args.no_plot:
-        plot_rows(rows, args.output, show=args.show, convo_count=convo_count)
+    if not args.no_plot or args.base64:
+        plot_rows(
+            rows,
+            args.output,
+            show=not args.no_show,
+            convo_count=convo_count,
+            print_base64=args.base64,
+        )
 
 
 if __name__ == "__main__":

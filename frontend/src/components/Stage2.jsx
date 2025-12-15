@@ -5,6 +5,7 @@ import rehypeKatex from 'rehype-katex';
 import 'katex/dist/katex.min.css';
 import { convertLatexDelimiters } from '../utils/latex';
 import { formatStats } from '../utils/stats';
+import { generateStatsGraph } from '../utils/graph';
 import './Stage2.css';
 
 function deAnonymizeText(text, labelToModel) {
@@ -160,6 +161,13 @@ export default function Stage2({ rankings, labelToModel, aggregateRankings }) {
                 )}
               </div>
             ))}
+          </div>
+          <div className="aggregate-graph">
+            <img 
+              src={generateStatsGraph(aggregateRankings)} 
+              alt="Performance Graph" 
+              style={{maxWidth: '100%', marginTop: '20px', border: '1px solid #eee', borderRadius: '4px'}} 
+            />
           </div>
         </div>
       )}

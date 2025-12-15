@@ -36,11 +36,22 @@ async def stage1_collect_responses(user_query: str, web_search: bool = False) ->
     # Query all models in parallel
     responses = await query_models_parallel(models, messages, web_search=web_search, web_search_models=browse_capable)
 
+    # Calculate max duration from successful responses to set retry timeout
+    successful_durations = [
+        r['elapsed_time'] for r in responses.values() 
+        if r is not None and r.get('elapsed_time') is not None
+    ]
+    # Default to 120s if no models succeeded, otherwise use max duration
+    retry_timeout = max(successful_durations) if successful_durations else 120.0
+    # Ensure a minimum reasonable timeout (e.g. 10s) even if models were super fast
+    retry_timeout = max(retry_timeout, 10.0)
+
     # Retry once for models that did not respond
     failed_models = [model for model, response in responses.items() if response is None]
     retry_responses = {}
     if failed_models:
-        retry_responses = await query_models_parallel(failed_models, messages, web_search=web_search, web_search_models=browse_capable)
+        print(f"Retrying failed models {failed_models} with timeout {retry_timeout}s")
+        retry_responses = await query_models_parallel(failed_models, messages, timeout=retry_timeout, web_search=web_search, web_search_models=browse_capable)
 
     # Format results in original model order; keep first-attempt placeholder, add retry only if it responded
     stage1_results = []
@@ -141,8 +152,18 @@ Now provide your evaluation and ranking:"""
 
     messages = [{"role": "user", "content": ranking_prompt}]
 
+    # Identify models that successfully responded in Stage 1
+    successful_models = set()
+    for result in stage1_results:
+        # Check if this is a real response, not the placeholder
+        if result.get('response') != "No response. Might retry.":
+            successful_models.add(result['model'])
+
+    # Only invite successful models to be judges
+    judges = [m for m in get_council_models_active() if m in successful_models]
+
     # Get rankings from all council models in parallel
-    responses = await query_models_parallel(get_council_models_active(), messages)
+    responses = await query_models_parallel(judges, messages)
 
     # Format results
     stage2_results = []

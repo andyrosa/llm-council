@@ -101,14 +101,21 @@ async def query_model(
                 'cost': cost,
             }
 
+    except httpx.HTTPStatusError as e:
+        print(f"Error querying model {model}: HTTP {e.response.status_code} - {e.response.text}")
+        return None
+    except httpx.TimeoutException as e:
+        print(f"Error querying model {model}: Request timed out after {timeout}s")
+        return None
     except Exception as e:
-        print(f"Error querying model {model}: {e}")
+        print(f"Error querying model {model}: {type(e).__name__}: {str(e)}")
         return None
 
 
 async def query_models_parallel(
     models: List[str],
     messages: List[Dict[str, str]],
+    timeout: float = 120.0,
     web_search: bool = False,
     web_search_models: set = None
 ) -> Dict[str, Optional[Dict[str, Any]]]:
@@ -118,6 +125,7 @@ async def query_models_parallel(
     Args:
         models: List of OpenRouter model identifiers
         messages: List of message dicts to send to each model
+        timeout: Request timeout in seconds
         web_search: Whether to enable web search (global flag)
         web_search_models: Set of model IDs that support web search. If provided and web_search is True,
                           only these models will have web_search enabled.
@@ -131,7 +139,7 @@ async def query_models_parallel(
     tasks = []
     for model in models:
         model_web_search = web_search and (web_search_models is None or model in web_search_models)
-        tasks.append(query_model(model, messages, web_search=model_web_search))
+        tasks.append(query_model(model, messages, timeout=timeout, web_search=model_web_search))
 
     # Wait for all to complete
     responses = await asyncio.gather(*tasks)

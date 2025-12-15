@@ -7,7 +7,7 @@ import { formatStats } from '../utils/stats';
 import { generateStatsGraph } from '../utils/graph';
 import './Stage3.css';
 
-export default function Stage3({ finalResponse, stage1, stage2, aggregateRankings }) {
+export default function Stage3({ finalResponse, stage1, stage2, aggregateRankings, conversationTitle }) {
   if (!finalResponse) {
     return null;
   }
@@ -20,6 +20,16 @@ export default function Stage3({ finalResponse, stage1, stage2, aggregateRanking
   };
 
   const handleExport = () => {
+    // Create filename from conversation title, or use default
+    const sanitizeFilename = (name) => {
+      return name
+        .replace(/[<>:"\/\\|?*]/g, '') // Remove invalid filename characters
+        .replace(/\s+/g, '_') // Replace spaces with underscores
+        .substring(0, 100); // Limit length
+    };
+    const filename = conversationTitle 
+      ? `${sanitizeFilename(conversationTitle)}.md`
+      : 'council_report.md';
     let md = `# Final Council Answer\n\n`;
     md += `**Chairman:** ${finalResponse.model}\n`;
     md += `**Stats:** ${stats || 'N/A'}\n\n`;
@@ -72,7 +82,7 @@ export default function Stage3({ finalResponse, stage1, stage2, aggregateRanking
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'council_report.md';
+    a.download = filename;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);

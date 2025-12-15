@@ -7,6 +7,7 @@ import './ChatInterface.css';
 
 export default function ChatInterface({
   conversation,
+  conversationTitle,
   onSendMessage,
   isLoading,
 }) {
@@ -141,6 +142,7 @@ export default function ChatInterface({
                       stage1={msg.stage1}
                       stage2={msg.stage2}
                       aggregateRankings={msg.metadata?.aggregate_rankings}
+                      conversationTitle={conversationTitle}
                     />
                   )}
                 </div>

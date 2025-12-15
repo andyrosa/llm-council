@@ -211,6 +211,7 @@ function App() {
         <ModelBar />
         <ChatInterface
           conversation={currentConversation}
+          conversationTitle={currentConversation?.title}
           onSendMessage={handleSendMessage}
           isLoading={isLoading}
         />

@@ -57,3 +57,26 @@
 .export-button:hover {
   background-color: #236b23;
 }
+
+.total-stats {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding: 8px 12px;
+  background: #f8f8f8;
+  border-radius: 4px;
+  border: 1px solid #e0e0e0;
+}
+
+.total-stats-label {
+  color: #666;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.total-stats-value {
+  color: #333;
+  font-size: 12px;
+  font-family: monospace;
+}

@@ -93,6 +93,8 @@ function App() {
         stage2: null,
         stage3: null,
         metadata: null,
+        elapsed_running_time: null,
+        total_cost: null,
         loading: {
           stage1: false,
           stage2: false,
@@ -163,6 +165,16 @@ function App() {
               const lastMsg = messages[messages.length - 1];
               lastMsg.stage3 = event.data;
               lastMsg.loading.stage3 = false;
+              return { ...prev, messages };
+            });
+            break;
+
+          case 'timing_complete':
+            setCurrentConversation((prev) => {
+              const messages = [...prev.messages];
+              const lastMsg = messages[messages.length - 1];
+              lastMsg.elapsed_running_time = event.data.elapsed_running_time;
+              lastMsg.total_cost = event.data.total_cost;
               return { ...prev, messages };
             });
             break;

@@ -141,9 +141,17 @@ async def send_message(conversation_id: str, request: SendMessageRequest):
         storage.update_conversation_title(conversation_id, title)
 
     # Run the 3-stage council process
+    import time
+    start_time = time.time()
     stage1_results, stage2_results, stage3_result, metadata = await run_full_council(
         request.content
     )
+    elapsed_running_time = round(time.time() - start_time, 2)
+    
+    # Calculate total cost
+    stage1_cost = sum(r.get('cost', 0) for r in stage1_results)
+    stage2_cost = sum(r.get('cost', 0) for r in stage2_results)
+    total_cost = stage1_cost + stage2_cost
 
     # Add assistant message with all stages
     storage.add_assistant_message(
@@ -151,7 +159,9 @@ async def send_message(conversation_id: str, request: SendMessageRequest):
         stage1_results,
         stage2_results,
         stage3_result,
-        metadata
+        metadata,
+        elapsed_running_time=elapsed_running_time,
+        total_cost=total_cost
     )
 
     # Return the complete response with metadata
@@ -179,6 +189,10 @@ async def send_message_stream(conversation_id: str, request: SendMessageRequest)
 
     async def event_generator():
         try:
+            # Track start time for elapsed running time calculation
+            import time
+            start_time = time.time()
+            
             # Add user message
             storage.add_user_message(conversation_id, request.content)
 
@@ -209,6 +223,12 @@ async def send_message_stream(conversation_id: str, request: SendMessageRequest)
                 storage.update_conversation_title(conversation_id, title)
                 yield f"data: {json.dumps({'type': 'title_complete', 'data': {'title': title}})}\n\n"
 
+            # Calculate elapsed running time and total cost
+            elapsed_running_time = round(time.time() - start_time, 2)
+            stage1_cost = sum(r.get('cost', 0) for r in stage1_results)
+            stage2_cost = sum(r.get('cost', 0) for r in stage2_results)
+            total_cost = stage1_cost + stage2_cost
+            
             # Save complete assistant message
             storage.add_assistant_message(
                 conversation_id,
@@ -218,8 +238,13 @@ async def send_message_stream(conversation_id: str, request: SendMessageRequest)
                 {
                     "label_to_model": label_to_model,
                     "aggregate_rankings": aggregate_rankings,
-                }
+                },
+                elapsed_running_time=elapsed_running_time,
+                total_cost=total_cost
             )
+
+            # Send timing and cost data
+            yield f"data: {json.dumps({'type': 'timing_complete', 'data': {'elapsed_running_time': elapsed_running_time, 'total_cost': total_cost}})}\n\n"
 
             # Send completion event
             yield f"data: {json.dumps({'type': 'complete'})}\n\n"

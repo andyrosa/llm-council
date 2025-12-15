@@ -132,7 +132,9 @@ def add_assistant_message(
     stage1: List[Dict[str, Any]],
     stage2: List[Dict[str, Any]],
     stage3: Dict[str, Any],
-    metadata: Optional[Dict[str, Any]] = None
+    metadata: Optional[Dict[str, Any]] = None,
+    elapsed_running_time: Optional[float] = None,
+    total_cost: Optional[float] = None
 ):
     """
     Add an assistant message with all 3 stages to a conversation.
@@ -143,18 +145,27 @@ def add_assistant_message(
         stage2: List of model rankings
         stage3: Final synthesized response
         metadata: Optional metadata (e.g., label_to_model, aggregate rankings)
+        elapsed_running_time: Total time from start to finish in seconds
+        total_cost: Total cost from stage1 and stage2
     """
     conversation = get_conversation(conversation_id)
     if conversation is None:
         raise ValueError(f"Conversation {conversation_id} not found")
 
-    conversation["messages"].append({
+    message_data = {
         "role": "assistant",
         "stage1": stage1,
         "stage2": stage2,
         "stage3": stage3,
         "metadata": metadata
-    })
+    }
+    
+    if elapsed_running_time is not None:
+        message_data["elapsed_running_time"] = elapsed_running_time
+    if total_cost is not None:
+        message_data["total_cost"] = total_cost
+    
+    conversation["messages"].append(message_data)
 
     save_conversation(conversation)
 

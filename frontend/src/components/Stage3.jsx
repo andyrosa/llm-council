@@ -7,12 +7,21 @@ import { formatStats } from '../utils/stats';
 import { generateStatsGraph } from '../utils/graph';
 import './Stage3.css';
 
-export default function Stage3({ finalResponse, stage1, stage2, aggregateRankings, conversationTitle }) {
+export default function Stage3({ finalResponse, stage1, stage2, aggregateRankings, conversationTitle, elapsedRunningTime, totalCost }) {
   if (!finalResponse) {
     return null;
   }
 
   const stats = formatStats(finalResponse.elapsed_time, finalResponse.cost);
+  
+  // Calculate total cost if not provided
+  const calculatedTotalCost = totalCost !== undefined ? totalCost : 
+    (stage1 && stage2 ? 
+      stage1.reduce((sum, r) => sum + (r.cost || 0), 0) + 
+      stage2.reduce((sum, r) => sum + (r.cost || 0), 0) : 
+      0);
+  
+  const totalStats = formatStats(elapsedRunningTime, calculatedTotalCost);
 
   // Helper function to increase all markdown heading levels by 1
   const increaseHeadingLevels = (markdown) => {
@@ -33,6 +42,9 @@ export default function Stage3({ finalResponse, stage1, stage2, aggregateRanking
     let md = `# Final Council Answer\n\n`;
     md += `**Chairman:** ${finalResponse.model}\n`;
     md += `**Stats:** ${stats || 'N/A'}\n\n`;
+    if (totalStats) {
+      md += `**Elapsed running time and total cost:** ${totalStats}\n\n`;
+    }
     md += `${finalResponse.response}\n\n`;
 
     if (aggregateRankings && stage1 && stage2) {
@@ -104,6 +116,12 @@ export default function Stage3({ finalResponse, stage1, stage2, aggregateRanking
           </span>
           {stats && <span className="model-stats-inline">{stats}</span>}
         </div>
+        {totalStats && (
+          <div className="total-stats">
+            <span className="total-stats-label">Elapsed running time and total cost:</span>
+            <span className="total-stats-value">{totalStats}</span>
+          </div>
+        )}
         <div className="final-text markdown-content">
           <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>
             {convertLatexDelimiters(finalResponse.response)}

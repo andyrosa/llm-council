@@ -143,6 +143,8 @@ export default function ChatInterface({
                       stage2={msg.stage2}
                       aggregateRankings={msg.metadata?.aggregate_rankings}
                       conversationTitle={conversationTitle}
+                      elapsedRunningTime={msg.elapsed_running_time}
+                      totalCost={msg.total_cost}
                     />
                   )}
                 </div>

@@ -3,6 +3,7 @@ import ReactMarkdown from 'react-markdown';
 import Stage1 from './Stage1';
 import Stage2 from './Stage2';
 import Stage3 from './Stage3';
+import ModelBarSnapshot from './ModelBarSnapshot';
 import './ChatInterface.css';
 
 export default function ChatInterface({
@@ -162,6 +163,11 @@ export default function ChatInterface({
               ) : (
                 <div className="assistant-message">
                   <div className="message-label">LLM Council</div>
+
+                  {/* Models snapshot - shown when results are available */}
+                  {msg.models_snapshot && (
+                    <ModelBarSnapshot models={msg.models_snapshot} />
+                  )}
 
                   {/* Stage 1 */}
                   {msg.loading?.stage1 && (

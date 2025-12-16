@@ -1,0 +1,139 @@
+.model-bar-snapshot {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 16px;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  margin-bottom: 12px;
+}
+
+.snapshot-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.snapshot-models {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.model-snapshot {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 14px;
+  font-size: 11px;
+  font-weight: 500;
+  background: #ffffff;
+  color: #374151;
+  cursor: default;
+  user-select: none;
+  opacity: 0.85;
+}
+
+.model-snapshot.enabled {
+  background: linear-gradient(135deg, #dcfce7, #d1fae5);
+  color: #166534;
+  border-color: #86efac;
+}
+
+.model-snapshot.disabled {
+  background: #f3f4f6;
+  color: #9ca3af;
+  border-color: #e5e7eb;
+  text-decoration: line-through;
+  opacity: 0.6;
+}
+
+.model-snapshot.has-note {
+  border-style: dashed;
+}
+
+.model-snapshot .model-note {
+  display: inline-block;
+  margin-left: 4px;
+  padding: 1px 4px;
+  background: rgba(255, 165, 0, 0.15);
+  border-radius: 3px;
+  font-size: 9px;
+  color: #a45200;
+}
+
+.model-snapshot.enabled .model-note {
+  background: rgba(22, 101, 52, 0.15);
+  color: #166534;
+}
+
+.model-snapshot-name {
+  display: inline-flex;
+  align-items: center;
+  color: inherit;
+}
+
+.model-snapshot .model-browse-icon {
+  font-size: 12px;
+  line-height: 1;
+  margin-right: 2px;
+  color: #2563eb;
+}
+
+.model-snapshot.enabled .model-browse-icon {
+  color: #1d4ed8;
+}
+
+.model-snapshot.disabled .model-browse-icon {
+  color: #9ca3af;
+}
+
+.model-snapshot .model-chairman-icon {
+  font-size: 12px;
+  line-height: 1;
+  margin-right: 2px;
+  color: #ca8a04;
+}
+
+.model-snapshot.enabled .model-chairman-icon {
+  color: #a16207;
+}
+
+.model-snapshot.disabled .model-chairman-icon {
+  color: #9ca3af;
+}
+
+.model-snapshot .model-expensive-icon {
+  font-size: 12px;
+  line-height: 1;
+  margin-right: 2px;
+  color: #dc2626;
+}
+
+.model-snapshot.enabled .model-expensive-icon {
+  color: #b91c1c;
+}
+
+.model-snapshot.disabled .model-expensive-icon {
+  color: #9ca3af;
+}
+
+.model-snapshot .model-code-icon {
+  font-size: 12px;
+  line-height: 1;
+  margin-right: 2px;
+  color: #7c3aed;
+}
+
+.model-snapshot.enabled .model-code-icon {
+  color: #6d28d9;
+}
+
+.model-snapshot.disabled .model-code-icon {
+  color: #9ca3af;
+}

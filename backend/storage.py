@@ -137,7 +137,8 @@ def add_assistant_message(
     total_cost: Optional[float] = None,
     web_search: bool = False,
     quick_mode: bool = False,
-    coding_mode: bool = False
+    coding_mode: bool = False,
+    models_snapshot: Optional[List[Dict[str, Any]]] = None
 ):
     """
     Add an assistant message with all 3 stages to a conversation.
@@ -153,6 +154,7 @@ def add_assistant_message(
         web_search: Whether web search was enabled for this run
         quick_mode: Whether quick/majority mode was enabled for this run
         coding_mode: Whether coding mode was enabled for this run
+        models_snapshot: Snapshot of model states at time of query
     """
     conversation = get_conversation(conversation_id)
     if conversation is None:
@@ -175,6 +177,10 @@ def add_assistant_message(
     message_data["web_search"] = web_search
     message_data["quick_mode"] = quick_mode
     message_data["coding_mode"] = coding_mode
+    
+    # Store models snapshot if provided
+    if models_snapshot is not None:
+        message_data["models_snapshot"] = models_snapshot
     
     conversation["messages"].append(message_data)
 

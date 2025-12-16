@@ -258,6 +258,7 @@ function App() {
               lastMsg.web_search = event.data.web_search;
               lastMsg.quick_mode = event.data.quick_mode;
               lastMsg.coding_mode = event.data.coding_mode;
+              lastMsg.models_snapshot = event.data.models_snapshot;
               return { ...prev, messages };
             });
             break;

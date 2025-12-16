@@ -154,6 +154,10 @@ async def send_message(conversation_id: str, request: SendMessageRequest):
     # Run the 3-stage council process
     import time
     start_time = time.time()
+    
+    # Capture models snapshot at time of query
+    models_snapshot = get_models_snapshot()
+    
     stage1_results, stage2_results, stage3_result, metadata = await run_full_council(
         request.content
     )
@@ -174,7 +178,8 @@ async def send_message(conversation_id: str, request: SendMessageRequest):
         elapsed_running_time=elapsed_running_time,
         total_cost=total_cost,
         web_search=request.web_search,
-        quick_mode=request.majority_mode
+        quick_mode=request.majority_mode,
+        models_snapshot=models_snapshot
     )
 
     # Return the complete response with metadata
@@ -207,6 +212,9 @@ async def send_message_stream(conversation_id: str, request: SendMessageRequest)
             # Track start time for elapsed running time calculation
             import time
             start_time = time.time()
+            
+            # Capture models snapshot at time of query
+            models_snapshot = get_models_snapshot()
             
             # Add user message
             storage.add_user_message(conversation_id, request.content)
@@ -318,11 +326,12 @@ async def send_message_stream(conversation_id: str, request: SendMessageRequest)
                 total_cost=total_cost,
                 web_search=request.web_search,
                 quick_mode=request.majority_mode,
-                coding_mode=request.coding_mode
+                coding_mode=request.coding_mode,
+                models_snapshot=models_snapshot
             )
 
-            # Send timing, cost, and run mode data
-            yield f"data: {json.dumps({'type': 'timing_complete', 'data': {'elapsed_running_time': elapsed_running_time, 'total_cost': total_cost, 'web_search': request.web_search, 'quick_mode': request.majority_mode, 'coding_mode': request.coding_mode}})}\n\n"
+            # Send timing, cost, run mode data, and models snapshot
+            yield f"data: {json.dumps({'type': 'timing_complete', 'data': {'elapsed_running_time': elapsed_running_time, 'total_cost': total_cost, 'web_search': request.web_search, 'quick_mode': request.majority_mode, 'coding_mode': request.coding_mode, 'models_snapshot': models_snapshot}})}\n\n"
 
             # Send completion event
             yield f"data: {json.dumps({'type': 'complete'})}\n\n"
@@ -343,9 +352,11 @@ async def send_message_stream(conversation_id: str, request: SendMessageRequest)
     )
 
 
-@app.get("/api/models")
-async def get_models():
-    """Get all models with their enabled state and notes."""
+def get_models_snapshot():
+    """Get a snapshot of all models with their enabled state and attributes.
+    
+    Returns a list of model dicts suitable for serializing with conversation results.
+    """
     registry_entries = load_model_registry()
     model_state = load_model_state()
     active_chairman = get_active_chairman_model(model_state)
@@ -402,6 +413,12 @@ async def get_models():
         result.append(entry)
 
     return result
+
+
+@app.get("/api/models")
+async def get_models():
+    """Get all models with their enabled state and notes."""
+    return get_models_snapshot()
 
 
 @app.post("/api/models/toggle")

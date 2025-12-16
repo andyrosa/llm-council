@@ -2,8 +2,10 @@
 
 import json
 import os
-from typing import List, Dict, Any, Tuple
-from .openrouter import query_models_parallel, query_model
+import asyncio
+import math
+from typing import List, Dict, Any, Tuple, AsyncGenerator
+from .openrouter import query_models_parallel, query_model, query_models_streaming
 from .config import get_council_models_active, get_active_chairman_model, get_browse_capable_models
 
 CHAIRMAN_INSTRUCTIONS_PATH = os.path.join(os.path.dirname(__file__), "..", "data", "chairman_instructions.json")
@@ -88,6 +90,224 @@ async def stage1_collect_responses(user_query: str, web_search: bool = False) ->
                 })
 
     return stage1_results
+
+
+async def stage1_collect_responses_streaming(
+    user_query: str, 
+    web_search: bool = False,
+    majority_mode: bool = False
+) -> AsyncGenerator[Dict[str, Any], None]:
+    """
+    Stage 1: Collect individual responses from all council models, streaming results.
+
+    Args:
+        user_query: The user's question
+        web_search: Whether to enable web search
+        majority_mode: If True, yield 'majority_reached' when 50%+ models have responded
+
+    Yields:
+        Dicts with event type and data:
+        - {'type': 'model_complete', 'model': str, 'response': dict, 'completed': int, 'total': int}
+        - {'type': 'majority_reached', 'results': list} (if majority_mode=True)
+        - {'type': 'stage_complete', 'results': list}
+    """
+    messages = [{"role": "user", "content": user_query}]
+    models = get_council_models_active()
+    browse_capable = get_browse_capable_models() if web_search else None
+    total_models = len(models)
+    majority_threshold = math.ceil(total_models / 2)
+    
+    results = {}  # model -> response dict
+    completed_count = 0
+    majority_yielded = False
+    
+    async for model, response, completed, total in query_models_streaming(models, messages, web_search=web_search, web_search_models=browse_capable):
+        completed_count = completed
+        
+        if response is not None:
+            result = {
+                "model": model,
+                "response": response.get('content', ''),
+                "elapsed_time": response.get('elapsed_time'),
+                "usage": response.get('usage'),
+                "cost": response.get('cost'),
+            }
+            results[model] = result
+            
+            yield {
+                'type': 'model_complete',
+                'model': model,
+                'response': result,
+                'completed': completed_count,
+                'total': total_models
+            }
+            
+            # Check if majority threshold reached
+            if majority_mode and not majority_yielded and len(results) >= majority_threshold:
+                majority_yielded = True
+                # Return results in original model order
+                ordered_results = [results[m] for m in models if m in results]
+                yield {
+                    'type': 'majority_reached',
+                    'results': ordered_results,
+                    'completed': len(results),
+                    'total': total_models
+                }
+        else:
+            # Model failed
+            yield {
+                'type': 'model_failed',
+                'model': model,
+                'completed': completed_count,
+                'total': total_models
+            }
+    
+    # Build final results in original model order, including placeholders for failed models
+    stage1_results = []
+    for model in models:
+        if model in results:
+            stage1_results.append(results[model])
+        else:
+            stage1_results.append({
+                "model": model,
+                "response": "No response.",
+                "elapsed_time": None,
+                "usage": None,
+                "cost": None,
+            })
+    
+    yield {
+        'type': 'stage_complete',
+        'results': stage1_results
+    }
+
+
+async def stage2_collect_rankings_streaming(
+    user_query: str,
+    stage1_results: List[Dict[str, Any]],
+    majority_mode: bool = False
+) -> AsyncGenerator[Dict[str, Any], None]:
+    """
+    Stage 2: Each model ranks the anonymized responses, streaming results.
+
+    Args:
+        user_query: The original user query
+        stage1_results: Results from Stage 1
+        majority_mode: If True, yield 'majority_reached' when 50%+ models have responded
+
+    Yields:
+        Dicts with event type and data
+    """
+    # Create anonymized labels for responses (Response A, Response B, etc.)
+    labels = [chr(65 + i) for i in range(len(stage1_results))]  # A, B, C, ...
+
+    # Create mapping from label to model name
+    label_to_model = {
+        f"Response {label}": result['model']
+        for label, result in zip(labels, stage1_results)
+    }
+
+    # Build the ranking prompt
+    responses_text = "\n\n".join([
+        f"Response {label}:\n{result['response']}"
+        for label, result in zip(labels, stage1_results)
+    ])
+
+    ranking_prompt = f"""You are evaluating different responses to the following question:
+
+Question: {user_query}
+
+Here are the responses from different models (anonymized):
+
+{responses_text}
+
+Your task:
+1. First, evaluate each response individually. For each response, explain what it does well and what it does poorly.
+2. Then, at the very end of your response, provide a final ranking.
+
+IMPORTANT: Your final ranking MUST be formatted EXACTLY as follows:
+- Start with the line "FINAL RANKING:" (all caps, with colon)
+- Then list the responses from best to worst as a numbered list
+- Each line should be: number, period, space, then ONLY the response label (e.g., "1. Response A")
+- Do not add any other text or explanations in the ranking section
+
+Example of the correct format for your ENTIRE response:
+
+Response A provides good detail on X but misses Y...
+Response B is accurate but lacks depth on Z...
+Response C offers the most comprehensive answer...
+
+FINAL RANKING:
+1. Response C
+2. Response A
+3. Response B
+
+Now provide your evaluation and ranking:"""
+
+    messages = [{"role": "user", "content": ranking_prompt}]
+
+    # Identify models that successfully responded in Stage 1
+    successful_models = set()
+    for result in stage1_results:
+        if result.get('response') != "No response." and result.get('response') != "No response. Might retry.":
+            successful_models.add(result['model'])
+
+    # Only invite successful models to be judges
+    judges = [m for m in get_council_models_active() if m in successful_models]
+    total_judges = len(judges)
+    majority_threshold = math.ceil(total_judges / 2)
+    
+    results = {}  # model -> ranking result
+    majority_yielded = False
+
+    async for model, response, completed, total in query_models_streaming(judges, messages):
+        if response is not None:
+            full_text = response.get('content', '')
+            parsed = parse_ranking_from_text(full_text)
+            result = {
+                "model": model,
+                "ranking": full_text,
+                "parsed_ranking": parsed,
+                "elapsed_time": response.get('elapsed_time'),
+                "cost": response.get('cost'),
+            }
+            results[model] = result
+            
+            yield {
+                'type': 'model_complete',
+                'model': model,
+                'response': result,
+                'completed': len(results),
+                'total': total_judges
+            }
+            
+            # Check if majority threshold reached
+            if majority_mode and not majority_yielded and len(results) >= majority_threshold:
+                majority_yielded = True
+                ordered_results = [results[m] for m in judges if m in results]
+                yield {
+                    'type': 'majority_reached',
+                    'results': ordered_results,
+                    'label_to_model': label_to_model,
+                    'completed': len(results),
+                    'total': total_judges
+                }
+        else:
+            yield {
+                'type': 'model_failed',
+                'model': model,
+                'completed': completed,
+                'total': total_judges
+            }
+    
+    # Build final results
+    stage2_results = [results[m] for m in judges if m in results]
+    
+    yield {
+        'type': 'stage_complete',
+        'results': stage2_results,
+        'label_to_model': label_to_model
+    }
 
 
 async def stage2_collect_rankings(

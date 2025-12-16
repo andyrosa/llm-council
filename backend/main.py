@@ -11,7 +11,16 @@ import asyncio
 import sys
 
 from . import storage
-from .council import run_full_council, generate_conversation_title, stage1_collect_responses, stage2_collect_rankings, stage3_synthesize_final, calculate_aggregate_rankings
+from .council import (
+    run_full_council, 
+    generate_conversation_title, 
+    stage1_collect_responses, 
+    stage2_collect_rankings, 
+    stage3_synthesize_final, 
+    calculate_aggregate_rankings,
+    stage1_collect_responses_streaming,
+    stage2_collect_rankings_streaming,
+)
 from .config import (
     OPENROUTER_API_KEY,
     COUNCIL_MODELS,
@@ -51,6 +60,7 @@ class SendMessageRequest(BaseModel):
     """Request to send a message in a conversation."""
     content: str
     web_search: bool = False
+    majority_mode: bool = False
 
 
 class ModelToggleRequest(BaseModel):
@@ -178,6 +188,8 @@ async def send_message_stream(conversation_id: str, request: SendMessageRequest)
     """
     Send a message and stream the 3-stage council process.
     Returns Server-Sent Events as each stage completes.
+    
+    If majority_mode is True, stages advance when 50%+ of models have responded.
     """
     # Check if conversation exists
     conversation = storage.get_conversation(conversation_id)
@@ -201,21 +213,81 @@ async def send_message_stream(conversation_id: str, request: SendMessageRequest)
             if is_first_message:
                 title_task = asyncio.create_task(generate_conversation_title(request.content))
 
-            # Stage 1: Collect responses
-            yield f"data: {json.dumps({'type': 'stage1_start'})}\n\n"
-            stage1_results = await stage1_collect_responses(request.content, request.web_search)
-            yield f"data: {json.dumps({'type': 'stage1_complete', 'data': stage1_results})}\n\n"
+            stage1_results = []
+            stage2_results = []
+            label_to_model = {}
+            
+            if request.majority_mode:
+                # Streaming mode with majority detection
+                yield f"data: {json.dumps({'type': 'stage1_start'})}\n\n"
+                
+                stage1_majority_results = None
+                async for event in stage1_collect_responses_streaming(request.content, request.web_search, majority_mode=True):
+                    if event['type'] == 'model_complete':
+                        yield f"data: {json.dumps({'type': 'stage1_model_complete', 'model': event['model'], 'response': event['response'], 'completed': event['completed'], 'total': event['total']})}\n\n"
+                    elif event['type'] == 'model_failed':
+                        yield f"data: {json.dumps({'type': 'stage1_model_failed', 'model': event['model'], 'completed': event['completed'], 'total': event['total']})}\n\n"
+                    elif event['type'] == 'majority_reached':
+                        stage1_majority_results = event['results']
+                        yield f"data: {json.dumps({'type': 'stage1_majority', 'data': event['results'], 'completed': event['completed'], 'total': event['total']})}\n\n"
+                        # Start Stage 2 immediately with majority results
+                        yield f"data: {json.dumps({'type': 'stage2_start'})}\n\n"
+                    elif event['type'] == 'stage_complete':
+                        stage1_results = event['results']
+                        yield f"data: {json.dumps({'type': 'stage1_complete', 'data': stage1_results})}\n\n"
+                
+                # Use majority results for Stage 2 if available, otherwise wait for all
+                stage2_input = stage1_majority_results if stage1_majority_results else stage1_results
+                
+                # Stage 2 with streaming
+                if not stage1_majority_results:
+                    yield f"data: {json.dumps({'type': 'stage2_start'})}\n\n"
+                
+                stage2_majority_results = None
+                async for event in stage2_collect_rankings_streaming(request.content, stage2_input, majority_mode=True):
+                    if event['type'] == 'model_complete':
+                        yield f"data: {json.dumps({'type': 'stage2_model_complete', 'model': event['model'], 'response': event['response'], 'completed': event['completed'], 'total': event['total']})}\n\n"
+                    elif event['type'] == 'model_failed':
+                        yield f"data: {json.dumps({'type': 'stage2_model_failed', 'model': event['model'], 'completed': event['completed'], 'total': event['total']})}\n\n"
+                    elif event['type'] == 'majority_reached':
+                        stage2_majority_results = event['results']
+                        label_to_model = event['label_to_model']
+                        aggregate_rankings = calculate_aggregate_rankings(stage2_majority_results, label_to_model, stage2_input)
+                        yield f"data: {json.dumps({'type': 'stage2_majority', 'data': stage2_majority_results, 'metadata': {'label_to_model': label_to_model, 'aggregate_rankings': aggregate_rankings}, 'completed': event['completed'], 'total': event['total']})}\n\n"
+                        # Start Stage 3 immediately with majority results
+                        yield f"data: {json.dumps({'type': 'stage3_start'})}\n\n"
+                    elif event['type'] == 'stage_complete':
+                        stage2_results = event['results']
+                        label_to_model = event['label_to_model']
+                        aggregate_rankings = calculate_aggregate_rankings(stage2_results, label_to_model, stage2_input)
+                        yield f"data: {json.dumps({'type': 'stage2_complete', 'data': stage2_results, 'metadata': {'label_to_model': label_to_model, 'aggregate_rankings': aggregate_rankings}})}\n\n"
+                
+                # Use majority results for Stage 3 if available
+                stage3_input_s2 = stage2_majority_results if stage2_majority_results else stage2_results
+                
+                # Stage 3: Synthesize final answer
+                if not stage2_majority_results:
+                    yield f"data: {json.dumps({'type': 'stage3_start'})}\n\n"
+                stage3_result = await stage3_synthesize_final(request.content, stage2_input, stage3_input_s2)
+                yield f"data: {json.dumps({'type': 'stage3_complete', 'data': stage3_result})}\n\n"
+                
+            else:
+                # Standard non-streaming mode
+                # Stage 1: Collect responses
+                yield f"data: {json.dumps({'type': 'stage1_start'})}\n\n"
+                stage1_results = await stage1_collect_responses(request.content, request.web_search)
+                yield f"data: {json.dumps({'type': 'stage1_complete', 'data': stage1_results})}\n\n"
 
-            # Stage 2: Collect rankings
-            yield f"data: {json.dumps({'type': 'stage2_start'})}\n\n"
-            stage2_results, label_to_model = await stage2_collect_rankings(request.content, stage1_results)
-            aggregate_rankings = calculate_aggregate_rankings(stage2_results, label_to_model, stage1_results)
-            yield f"data: {json.dumps({'type': 'stage2_complete', 'data': stage2_results, 'metadata': {'label_to_model': label_to_model, 'aggregate_rankings': aggregate_rankings}})}\n\n"
+                # Stage 2: Collect rankings
+                yield f"data: {json.dumps({'type': 'stage2_start'})}\n\n"
+                stage2_results, label_to_model = await stage2_collect_rankings(request.content, stage1_results)
+                aggregate_rankings = calculate_aggregate_rankings(stage2_results, label_to_model, stage1_results)
+                yield f"data: {json.dumps({'type': 'stage2_complete', 'data': stage2_results, 'metadata': {'label_to_model': label_to_model, 'aggregate_rankings': aggregate_rankings}})}\n\n"
 
-            # Stage 3: Synthesize final answer
-            yield f"data: {json.dumps({'type': 'stage3_start'})}\n\n"
-            stage3_result = await stage3_synthesize_final(request.content, stage1_results, stage2_results)
-            yield f"data: {json.dumps({'type': 'stage3_complete', 'data': stage3_result})}\n\n"
+                # Stage 3: Synthesize final answer
+                yield f"data: {json.dumps({'type': 'stage3_start'})}\n\n"
+                stage3_result = await stage3_synthesize_final(request.content, stage1_results, stage2_results)
+                yield f"data: {json.dumps({'type': 'stage3_complete', 'data': stage3_result})}\n\n"
 
             # Wait for title generation if it was started
             if title_task:
@@ -225,8 +297,8 @@ async def send_message_stream(conversation_id: str, request: SendMessageRequest)
 
             # Calculate elapsed running time and total cost
             elapsed_running_time = round(time.time() - start_time, 2)
-            stage1_cost = sum(r.get('cost', 0) for r in stage1_results)
-            stage2_cost = sum(r.get('cost', 0) for r in stage2_results)
+            stage1_cost = sum(r.get('cost') or 0 for r in stage1_results)
+            stage2_cost = sum(r.get('cost') or 0 for r in stage2_results)
             total_cost = stage1_cost + stage2_cost
             
             # Save complete assistant message
@@ -251,6 +323,8 @@ async def send_message_stream(conversation_id: str, request: SendMessageRequest)
 
         except Exception as e:
             # Send error event
+            import traceback
+            traceback.print_exc()
             yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
 
     return StreamingResponse(

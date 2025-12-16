@@ -14,11 +14,17 @@ export default function ChatInterface({
   const [input, setInput] = useState('');
   const [webSearchMode, setWebSearchMode] = useState('auto'); // 'auto' | 'on' | 'off'
   const [webSearchAnimating, setWebSearchAnimating] = useState(false);
+  const [majorityMode, setMajorityMode] = useState('auto'); // 'auto' | 'on' | 'off'
+  const [majorityAnimating, setMajorityAnimating] = useState(false);
   const messagesEndRef = useRef(null);
 
   const hasWebSearchWord = /\b(search|today|recent|news)\b/i.test(input);
   const autoWebSearchDetected = webSearchMode === 'auto' && hasWebSearchWord;
   const webSearchEnabled = webSearchMode === 'on' || autoWebSearchDetected;
+
+  const hasMajorityWord = /\b(quick|majority)\b/i.test(input);
+  const autoMajorityDetected = majorityMode === 'auto' && hasMajorityWord;
+  const majorityEnabled = majorityMode === 'on' || autoMajorityDetected;
 
   // Animate when auto-detection triggers web search
   useEffect(() => {
@@ -34,6 +40,18 @@ export default function ChatInterface({
       };
     }
   }, [hasWebSearchWord, webSearchMode]);
+
+  // Animate when auto-detection triggers majority mode
+  useEffect(() => {
+    if (majorityMode === 'auto' && hasMajorityWord) {
+      const startTimer = setTimeout(() => setMajorityAnimating(true), 0);
+      const stopTimer = setTimeout(() => setMajorityAnimating(false), 600);
+      return () => {
+        clearTimeout(startTimer);
+        clearTimeout(stopTimer);
+      };
+    }
+  }, [hasMajorityWord, majorityMode]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -53,12 +71,23 @@ export default function ChatInterface({
     }
   };
 
+  const handleMajorityToggle = () => {
+    if (majorityMode === 'auto') {
+      setMajorityMode('on');
+    } else if (majorityMode === 'on') {
+      setMajorityMode('off');
+    } else {
+      setMajorityMode('auto');
+    }
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
     if (input.trim() && !isLoading) {
-      onSendMessage(input, webSearchEnabled);
+      onSendMessage(input, webSearchEnabled, majorityEnabled);
       setInput('');
       setWebSearchMode('auto');
+      setMajorityMode('auto');
     }
   };
 
@@ -109,16 +138,37 @@ export default function ChatInterface({
                   {msg.loading?.stage1 && (
                     <div className="stage-loading">
                       <div className="spinner"></div>
-                      <span>Running Stage 1: Collecting individual responses...</span>
+                      <span>
+                        Running Stage 1: Collecting individual responses...
+                        {msg.progress?.stage1?.total > 0 && (
+                          <span className="progress-indicator">
+                            {' '}({msg.progress.stage1.completed}/{msg.progress.stage1.total})
+                            {msg.progress.stage1.majorityReached && ' ✓ Majority reached'}
+                          </span>
+                        )}
+                      </span>
                     </div>
                   )}
-                  {msg.stage1 && <Stage1 responses={msg.stage1} />}
+                  {msg.stage1 && (
+                    <Stage1 
+                      responses={msg.stage1} 
+                      progress={msg.progress?.stage1}
+                    />
+                  )}
 
                   {/* Stage 2 */}
                   {msg.loading?.stage2 && (
                     <div className="stage-loading">
                       <div className="spinner"></div>
-                      <span>Running Stage 2: Peer rankings...</span>
+                      <span>
+                        Running Stage 2: Peer rankings...
+                        {msg.progress?.stage2?.total > 0 && (
+                          <span className="progress-indicator">
+                            {' '}({msg.progress.stage2.completed}/{msg.progress.stage2.total})
+                            {msg.progress.stage2.majorityReached && ' ✓ Majority reached'}
+                          </span>
+                        )}
+                      </span>
                     </div>
                   )}
                   {msg.stage2 && (
@@ -126,6 +176,7 @@ export default function ChatInterface({
                       rankings={msg.stage2}
                       labelToModel={msg.metadata?.label_to_model}
                       aggregateRankings={msg.metadata?.aggregate_rankings}
+                      progress={msg.progress?.stage2}
                     />
                   )}
 
@@ -175,15 +226,26 @@ export default function ChatInterface({
             rows={3}
           />
           <div className="input-actions">
-            <label
-              className={`web-search-toggle ${webSearchAnimating ? 'animating' : ''} ${webSearchEnabled ? 'enabled' : ''}`}
-              onClick={handleWebSearchToggle}
-            >
-              <span className={`web-search-indicator ${webSearchEnabled ? 'on' : 'off'}`} />
-              <span className="web-search-label">
-                Web {webSearchMode === 'auto' ? '(auto)' : webSearchMode === 'on' ? 'on' : 'off'}
-              </span>
-            </label>
+            <div className="toggle-group">
+              <label
+                className={`web-search-toggle ${webSearchAnimating ? 'animating' : ''} ${webSearchEnabled ? 'enabled' : ''}`}
+                onClick={handleWebSearchToggle}
+              >
+                <span className={`web-search-indicator ${webSearchEnabled ? 'on' : 'off'}`} />
+                <span className="web-search-label">
+                  Web {webSearchMode === 'auto' ? '(auto)' : webSearchMode === 'on' ? 'on' : 'off'}
+                </span>
+              </label>
+              <label
+                className={`majority-toggle ${majorityAnimating ? 'animating' : ''} ${majorityEnabled ? 'enabled' : ''}`}
+                onClick={handleMajorityToggle}
+              >
+                <span className={`majority-indicator ${majorityEnabled ? 'on' : 'off'}`} />
+                <span className="majority-label">
+                  Quick {majorityMode === 'auto' ? '(auto)' : majorityMode === 'on' ? 'on' : 'off'}
+                </span>
+              </label>
+            </div>
             <button
               type="submit"
               className="send-button"

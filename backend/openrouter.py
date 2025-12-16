@@ -112,6 +112,54 @@ async def query_model(
         return None
 
 
+async def query_models_streaming(
+    models: List[str],
+    messages: List[Dict[str, str]],
+    timeout: float = 120.0,
+    web_search: bool = False,
+    web_search_models: set = None
+):
+    """
+    Query multiple models in parallel, yielding results as each model completes.
+
+    Args:
+        models: List of OpenRouter model identifiers
+        messages: List of message dicts to send to each model
+        timeout: Request timeout in seconds
+        web_search: Whether to enable web search (global flag)
+        web_search_models: Set of model IDs that support web search. If provided and web_search is True,
+                          only these models will have web_search enabled.
+
+    Yields:
+        Tuple of (model, response_dict or None, completed_count, total_count)
+    """
+    import asyncio
+
+    # Create named tasks for all models - store model name with each task
+    tasks = {}
+    for model in models:
+        model_web_search = web_search and (web_search_models is None or model in web_search_models)
+        task = asyncio.create_task(query_model(model, messages, timeout=timeout, web_search=model_web_search))
+        tasks[task] = model
+    
+    total_count = len(models)
+    completed_count = 0
+    pending = set(tasks.keys())
+    
+    # Use as_completed to yield results as they finish
+    while pending:
+        done, pending = await asyncio.wait(pending, return_when=asyncio.FIRST_COMPLETED)
+        for task in done:
+            model = tasks[task]
+            completed_count += 1
+            try:
+                result = task.result()
+                yield (model, result, completed_count, total_count)
+            except Exception as e:
+                print(f"Task for {model} raised exception: {e}")
+                yield (model, None, completed_count, total_count)
+
+
 async def query_models_parallel(
     models: List[str],
     messages: List[Dict[str, str]],

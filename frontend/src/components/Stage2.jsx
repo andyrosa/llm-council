@@ -20,7 +20,7 @@ function deAnonymizeText(text, labelToModel) {
   return result;
 }
 
-export default function Stage2({ rankings, labelToModel, aggregateRankings }) {
+export default function Stage2({ rankings, labelToModel, aggregateRankings, progress }) {
   const [activeTab, setActiveTab] = useState(0);
 
   const costBaseline = aggregateRankings && aggregateRankings.length > 0
@@ -69,10 +69,18 @@ export default function Stage2({ rankings, labelToModel, aggregateRankings }) {
 
   const activeRanking = rankings[activeTab];
   const stats = formatStats(activeRanking.elapsed_time, activeRanking.cost);
+  const showProgress = progress && progress.total > 0 && progress.completed < progress.total;
 
   return (
     <div className="stage stage2">
-      <h3 className="stage-title">Stage 2: Peer Rankings</h3>
+      <h3 className="stage-title">
+        Stage 2: Peer Rankings
+        {showProgress && (
+          <span className="stage-progress">
+            ({progress.completed}/{progress.total} judges)
+          </span>
+        )}
+      </h3>
 
       <h4>Raw Evaluations</h4>
       <p className="stage-description">

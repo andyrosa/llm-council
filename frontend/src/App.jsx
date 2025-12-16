@@ -74,7 +74,7 @@ function App() {
     }
   };
 
-  const handleSendMessage = async (content, webSearch = false) => {
+  const handleSendMessage = async (content, webSearch = false, majorityMode = false) => {
     if (!currentConversationId) return;
 
     setIsLoading(true);
@@ -100,6 +100,10 @@ function App() {
           stage2: false,
           stage3: false,
         },
+        progress: {
+          stage1: { completed: 0, total: 0 },
+          stage2: { completed: 0, total: 0 },
+        },
       };
 
       // Add the partial assistant message
@@ -109,13 +113,52 @@ function App() {
       }));
 
       // Send message with streaming
-      await api.sendMessageStream(currentConversationId, content, webSearch, (eventType, event) => {
+      await api.sendMessageStream(currentConversationId, content, webSearch, majorityMode, (eventType, event) => {
         switch (eventType) {
           case 'stage1_start':
             setCurrentConversation((prev) => {
               const messages = [...prev.messages];
               const lastMsg = messages[messages.length - 1];
               lastMsg.loading.stage1 = true;
+              return { ...prev, messages };
+            });
+            break;
+
+          case 'stage1_model_complete':
+            setCurrentConversation((prev) => {
+              const messages = [...prev.messages];
+              const lastMsg = messages[messages.length - 1];
+              // Update progress
+              lastMsg.progress.stage1 = { completed: event.completed, total: event.total };
+              // Add response to stage1 array incrementally
+              if (!lastMsg.stage1) lastMsg.stage1 = [];
+              // Check if model already exists (update) or add new
+              const existingIdx = lastMsg.stage1.findIndex(r => r.model === event.model);
+              if (existingIdx >= 0) {
+                lastMsg.stage1[existingIdx] = event.response;
+              } else {
+                lastMsg.stage1 = [...lastMsg.stage1, event.response];
+              }
+              return { ...prev, messages };
+            });
+            break;
+
+          case 'stage1_model_failed':
+            setCurrentConversation((prev) => {
+              const messages = [...prev.messages];
+              const lastMsg = messages[messages.length - 1];
+              lastMsg.progress.stage1 = { completed: event.completed, total: event.total };
+              return { ...prev, messages };
+            });
+            break;
+
+          case 'stage1_majority':
+            setCurrentConversation((prev) => {
+              const messages = [...prev.messages];
+              const lastMsg = messages[messages.length - 1];
+              // Update stage1 with majority results
+              lastMsg.stage1 = event.data;
+              lastMsg.progress.stage1 = { completed: event.completed, total: event.total, majorityReached: true };
               return { ...prev, messages };
             });
             break;
@@ -135,6 +178,43 @@ function App() {
               const messages = [...prev.messages];
               const lastMsg = messages[messages.length - 1];
               lastMsg.loading.stage2 = true;
+              return { ...prev, messages };
+            });
+            break;
+
+          case 'stage2_model_complete':
+            setCurrentConversation((prev) => {
+              const messages = [...prev.messages];
+              const lastMsg = messages[messages.length - 1];
+              lastMsg.progress.stage2 = { completed: event.completed, total: event.total };
+              // Add response to stage2 array incrementally
+              if (!lastMsg.stage2) lastMsg.stage2 = [];
+              const existingIdx = lastMsg.stage2.findIndex(r => r.model === event.model);
+              if (existingIdx >= 0) {
+                lastMsg.stage2[existingIdx] = event.response;
+              } else {
+                lastMsg.stage2 = [...lastMsg.stage2, event.response];
+              }
+              return { ...prev, messages };
+            });
+            break;
+
+          case 'stage2_model_failed':
+            setCurrentConversation((prev) => {
+              const messages = [...prev.messages];
+              const lastMsg = messages[messages.length - 1];
+              lastMsg.progress.stage2 = { completed: event.completed, total: event.total };
+              return { ...prev, messages };
+            });
+            break;
+
+          case 'stage2_majority':
+            setCurrentConversation((prev) => {
+              const messages = [...prev.messages];
+              const lastMsg = messages[messages.length - 1];
+              lastMsg.stage2 = event.data;
+              lastMsg.metadata = event.metadata;
+              lastMsg.progress.stage2 = { completed: event.completed, total: event.total, majorityReached: true };
               return { ...prev, messages };
             });
             break;
@@ -180,7 +260,11 @@ function App() {
             break;
 
           case 'title_complete':
-            // Reload conversations to get updated title
+            // Update current conversation title and reload sidebar
+            setCurrentConversation((prev) => ({
+              ...prev,
+              title: event.data.title,
+            }));
             loadConversations();
             break;
 

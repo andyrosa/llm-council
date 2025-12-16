@@ -20,7 +20,7 @@ function deAnonymizeText(text, labelToModel) {
   return result;
 }
 
-export default function Stage2({ rankings, labelToModel, aggregateRankings, progress }) {
+export default function Stage2({ rankings, labelToModel, aggregateRankings, progress, stage1 }) {
   const [activeTab, setActiveTab] = useState(0);
 
   const costBaseline = aggregateRankings && aggregateRankings.length > 0
@@ -172,7 +172,7 @@ export default function Stage2({ rankings, labelToModel, aggregateRankings, prog
           </div>
           <div className="aggregate-graph">
             <img 
-              src={generateStatsGraph(aggregateRankings)} 
+              src={generateStatsGraph(aggregateRankings, stage1)} 
               alt="Performance Graph" 
               style={{maxWidth: '100%', marginTop: '20px', border: '1px solid #eee', borderRadius: '4px'}} 
             />

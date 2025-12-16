@@ -13,6 +13,20 @@ export function generateStatsGraph(rankings, stage1) {
   ctx.fillStyle = 'white';
   ctx.fillRect(0, 0, width, height);
 
+  // Identify timed-out models from stage1 (elapsed_time is null and response indicates failure)
+  const timedOutModels = [];
+  if (stage1) {
+    for (const s of stage1) {
+      if (s.elapsed_time === null || s.elapsed_time === undefined) {
+        const response = s.response || '';
+        if (response.includes('No response') || response.toLowerCase().includes('did not reply')) {
+          const shortName = (s.model.split('/')[1] || s.model).substring(0, 20);
+          timedOutModels.push(shortName);
+        }
+      }
+    }
+  }
+
   // Data prep
   const data = rankings.map(r => {
     // If stage1 is provided, use it to find delay/cost (Stage 3 logic)
@@ -91,6 +105,36 @@ export function generateStatsGraph(rankings, stage1) {
     ctx.font = 'bold 14px sans-serif';
     ctx.textAlign = 'center';
     ctx.fillText(title, startX + plotWidth / 2, padding / 2);
+
+    // Show timed-out models note (only on the delay plot, which is the first one)
+    if (yKey === 'delay' && timedOutModels.length > 0) {
+      ctx.fillStyle = 'red';
+      ctx.font = '10px sans-serif';
+      ctx.textAlign = 'center';
+      const timeoutText = 'Timed out: ' + timedOutModels.join(', ');
+      // Wrap text if too wide
+      const maxWidth = plotWidth;
+      const words = timeoutText.split(' ');
+      let lines = [];
+      let currentLine = '';
+      for (const word of words) {
+        const testLine = currentLine ? currentLine + ' ' + word : word;
+        const metrics = ctx.measureText(testLine);
+        if (metrics.width > maxWidth && currentLine) {
+          lines.push(currentLine);
+          currentLine = word;
+        } else {
+          currentLine = testLine;
+        }
+      }
+      if (currentLine) lines.push(currentLine);
+      // Draw wrapped lines below title
+      let yOffset = padding / 2 + 14;
+      for (const line of lines) {
+        ctx.fillText(line, startX + plotWidth / 2, yOffset);
+        yOffset += 12;
+      }
+    }
 
     // Labels
     ctx.font = '12px sans-serif';

@@ -175,7 +175,7 @@ def _collect_percentiles(message: Dict) -> Dict[str, Tuple[float, int]]:
     return percentiles
 
 
-def compute_stats() -> Tuple[Dict[str, Dict[str, float]], int]:
+def compute_stats() -> Tuple[Dict[str, Dict[str, float]], Dict[str, int], int]:
     conversations = _load_conversations(DATA_DIR)
     accum: Dict[str, Dict[str, float]] = defaultdict(
         lambda: {
@@ -187,6 +187,7 @@ def compute_stats() -> Tuple[Dict[str, Dict[str, float]], int]:
             "cost_count": 0.0,
         }
     )
+    timeouts: Dict[str, int] = defaultdict(int)
 
     for convo in conversations:
         for message in convo.get("messages", []):
@@ -204,6 +205,12 @@ def compute_stats() -> Tuple[Dict[str, Dict[str, float]], int]:
                 if not model:
                     continue
                 stats = accum[model]
+
+                # Track timeouts: elapsed_time is None and response indicates failure
+                elapsed = entry.get("elapsed_time")
+                response = entry.get("response", "")
+                if elapsed is None and ("No response" in response or "did not reply" in response.lower()):
+                    timeouts[model] += 1
 
                 cost = _get_cost(entry)
                 if cost is not None:
@@ -225,7 +232,7 @@ def compute_stats() -> Tuple[Dict[str, Dict[str, float]], int]:
                     stats["pct_sum"] += pct_sum
                     stats["pct_count"] += pct_count
 
-    return accum, len(conversations)
+    return accum, dict(timeouts), len(conversations)
 
 
 def _fmt(value: Optional[float]) -> str:
@@ -238,26 +245,29 @@ def _fmt(value: Optional[float]) -> str:
     return formatted
 
 
-def build_rows(stats: Dict[str, Dict[str, float]]):
+def build_rows(stats: Dict[str, Dict[str, float]], timeouts: Optional[Dict[str, int]] = None):
+    timeouts = timeouts or {}
     rows = []
     for model, data in stats.items():
         avg_pct = data["pct_sum"] / data["pct_count"] if data["pct_count"] else None
         avg_delay = data["delay_sum"] / data["delay_count"] if data["delay_count"] else None
         avg_cost = data["cost_sum"] / data["cost_count"] if data["cost_count"] else None
-        rows.append((model, avg_pct, avg_delay, avg_cost))
+        timeout_count = timeouts.get(model, 0)
+        rows.append((model, avg_pct, avg_delay, avg_cost, timeout_count))
 
     rows.sort(key=lambda r: (r[1] if r[1] is not None else float("inf"), r[0]))
     return rows
 
 
 def print_table(rows) -> None:
-    header = f"{'Model':<35} {'AvgPct':>8} {'NormDelay':>10} {'AvgCost(cents)':>15}"
+    header = f"{'Model':<35} {'AvgPct':>8} {'NormDelay':>10} {'AvgCost(cents)':>15} {'Timeouts':>10}"
     print(header)
     print("-" * len(header))
-    for model, avg_pct, avg_delay, avg_cost in rows:
+    for model, avg_pct, avg_delay, avg_cost, timeout_count in rows:
         cost_cents = avg_cost * 100 if avg_cost is not None else None
+        timeout_str = str(timeout_count) if timeout_count > 0 else ""
         print(
-            f"{model:<35} {_fmt(avg_pct):>8} {_fmt(avg_delay):>10} {_fmt(cost_cents):>15}"
+            f"{model:<35} {_fmt(avg_pct):>8} {_fmt(avg_delay):>10} {_fmt(cost_cents):>15} {timeout_str:>10}"
         )
 
 
@@ -278,6 +288,8 @@ def plot_rows(
     pct_cost = [
         (r[1], r[3] * 100.0, r[0]) for r in rows if r[1] is not None and r[3] is not None
     ]
+    # Models that timed out (have timeout count > 0)
+    timed_out_models = [(r[0], r[4]) for r in rows if r[4] > 0]
 
     fig, axes = plt.subplots(1, 2, figsize=(12, 5))
     fig.subplots_adjust(wspace=0.4, left=0.1, right=0.95, top=0.85, bottom=0.15)
@@ -300,6 +312,20 @@ def plot_rows(
         
         axes[0].yaxis.set_major_formatter(FuncFormatter(lambda x, _: f"{x:.2g}"))
         axes[0].yaxis.set_minor_formatter(FuncFormatter(lambda x, _: f"{x:.2g}"))
+
+        # Show timed-out models as a note at the top of the graph
+        if timed_out_models:
+            timeout_text = "Timed out: " + ", ".join(
+                f"{name} ({count}x)" for name, count in timed_out_models
+            )
+            axes[0].text(
+                0.5, 1.02, timeout_text,
+                transform=axes[0].transAxes,
+                fontsize=8, ha="center", va="bottom", color="red",
+                wrap=True
+            )
+            # Set wrap width to match axes width
+            axes[0].texts[-1]._get_wrap_line_width = lambda: axes[0].get_window_extent().width
 
         axes[0].set_title("Delay vs. Percentile", pad=18)
         axes[0].grid(True, alpha=0.2, which="both")
@@ -369,8 +395,8 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    stats, convo_count = compute_stats()
-    rows = build_rows(stats)
+    stats, timeouts, convo_count = compute_stats()
+    rows = build_rows(stats, timeouts)
 
     print_table(rows)
 

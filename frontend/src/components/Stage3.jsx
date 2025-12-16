@@ -134,6 +134,11 @@ export default function Stage3({ finalResponse, stage1, stage2, aggregateRanking
             {convertLatexDelimiters(finalResponse.response)}
           </ReactMarkdown>
         </div>
+        {finalResponse.custom_chairman_instructions && (
+          <div className="chairman-footnote">
+            * Custom chairman instructions in effect
+          </div>
+        )}
       </div>
     </div>
   );

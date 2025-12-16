@@ -104,6 +104,7 @@ async def stage1_collect_responses_streaming(
         user_query: The user's question
         web_search: Whether to enable web search
         majority_mode: If True, yield 'majority_reached' when 50%+ models have responded
+        coding_mode: Whether coding mode is enabled
 
     Yields:
         Dicts with event type and data:
@@ -114,6 +115,16 @@ async def stage1_collect_responses_streaming(
     messages = [{"role": "user", "content": user_query}]
     models = get_council_models_active()
     browse_capable = get_browse_capable_models() if web_search else None
+    coding_capable = get_coding_capable_models()
+    
+    # Filter out coding models unless coding_mode is set,
+    # or web_search is set and the model can browse
+    if not coding_mode:
+        models = [
+            m for m in models
+            if m not in coding_capable or (web_search and browse_capable and m in browse_capable)
+        ]
+    
     total_models = len(models)
     majority_threshold = math.ceil(total_models / 2)
     

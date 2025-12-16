@@ -2,6 +2,7 @@
 
 import os
 import json
+import msvcrt
 from typing import Dict, List, Optional, Tuple, TypedDict
 from dotenv import load_dotenv
 
@@ -57,7 +58,12 @@ def load_model_registry() -> List[ModelRegistryEntry]:
         return []
 
     with open(MODEL_REGISTRY_PATH, "r", encoding="utf-8") as handle:
-        raw = json.load(handle)
+        msvcrt.locking(handle.fileno(), msvcrt.LK_LOCK, 1)
+        try:
+            raw = json.load(handle)
+        finally:
+            handle.seek(0)
+            msvcrt.locking(handle.fileno(), msvcrt.LK_UNLCK, 1)
 
     if isinstance(raw, dict):
         entries = raw.get("models", [])
@@ -94,8 +100,15 @@ def load_model_registry() -> List[ModelRegistryEntry]:
 def save_model_registry(entries: List[ModelRegistryEntry]) -> None:
     """Persist the model registry."""
     payload = {"models": entries}
-    with open(MODEL_REGISTRY_PATH, "w", encoding="utf-8") as handle:
-        json.dump(payload, handle, indent=2)
+    with open(MODEL_REGISTRY_PATH, "r+", encoding="utf-8") as handle:
+        msvcrt.locking(handle.fileno(), msvcrt.LK_LOCK, 1)
+        try:
+            handle.truncate(0)
+            handle.seek(0)
+            json.dump(payload, handle, indent=2)
+        finally:
+            handle.seek(0)
+            msvcrt.locking(handle.fileno(), msvcrt.LK_UNLCK, 1)
 
 
 def get_browse_capable_models() -> set:
@@ -146,7 +159,12 @@ def load_model_state() -> Dict[str, object]:
         return _empty_state()
 
     with open(MODEL_STATE_PATH, "r", encoding="utf-8") as handle:
-        raw = json.load(handle)
+        msvcrt.locking(handle.fileno(), msvcrt.LK_LOCK, 1)
+        try:
+            raw = json.load(handle)
+        finally:
+            handle.seek(0)
+            msvcrt.locking(handle.fileno(), msvcrt.LK_UNLCK, 1)
 
     if isinstance(raw, dict) and "models" in raw:
         models_section = raw.get("models", {})
@@ -190,8 +208,15 @@ def save_model_state(state: Dict[str, object]) -> None:
             elif isinstance(meta, bool):
                 enabled = meta
             to_save["models"][model] = {"enabled": enabled}
-    with open(MODEL_STATE_PATH, "w", encoding="utf-8") as handle:
-        json.dump(to_save, handle, indent=2)
+    with open(MODEL_STATE_PATH, "r+", encoding="utf-8") as handle:
+        msvcrt.locking(handle.fileno(), msvcrt.LK_LOCK, 1)
+        try:
+            handle.truncate(0)
+            handle.seek(0)
+            json.dump(to_save, handle, indent=2)
+        finally:
+            handle.seek(0)
+            msvcrt.locking(handle.fileno(), msvcrt.LK_UNLCK, 1)
 
 
 def get_active_chairman_model(state: Optional[Dict[str, object]] = None) -> str:

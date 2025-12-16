@@ -74,7 +74,7 @@ function App() {
     }
   };
 
-  const handleSendMessage = async (content, webSearch = false, majorityMode = false) => {
+  const handleSendMessage = async (content, webSearch = false, majorityMode = false, codingMode = false) => {
     if (!currentConversationId) return;
 
     setIsLoading(true);
@@ -113,7 +113,7 @@ function App() {
       }));
 
       // Send message with streaming
-      await api.sendMessageStream(currentConversationId, content, webSearch, majorityMode, (eventType, event) => {
+      await api.sendMessageStream(currentConversationId, content, webSearch, majorityMode, codingMode, (eventType, event) => {
         switch (eventType) {
           case 'stage1_start':
             setCurrentConversation((prev) => {
@@ -255,6 +255,9 @@ function App() {
               const lastMsg = messages[messages.length - 1];
               lastMsg.elapsed_running_time = event.data.elapsed_running_time;
               lastMsg.total_cost = event.data.total_cost;
+              lastMsg.web_search = event.data.web_search;
+              lastMsg.quick_mode = event.data.quick_mode;
+              lastMsg.coding_mode = event.data.coding_mode;
               return { ...prev, messages };
             });
             break;

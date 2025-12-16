@@ -134,7 +134,10 @@ def add_assistant_message(
     stage3: Dict[str, Any],
     metadata: Optional[Dict[str, Any]] = None,
     elapsed_running_time: Optional[float] = None,
-    total_cost: Optional[float] = None
+    total_cost: Optional[float] = None,
+    web_search: bool = False,
+    quick_mode: bool = False,
+    coding_mode: bool = False
 ):
     """
     Add an assistant message with all 3 stages to a conversation.
@@ -147,6 +150,9 @@ def add_assistant_message(
         metadata: Optional metadata (e.g., label_to_model, aggregate rankings)
         elapsed_running_time: Total time from start to finish in seconds
         total_cost: Total cost from stage1 and stage2
+        web_search: Whether web search was enabled for this run
+        quick_mode: Whether quick/majority mode was enabled for this run
+        coding_mode: Whether coding mode was enabled for this run
     """
     conversation = get_conversation(conversation_id)
     if conversation is None:
@@ -164,6 +170,11 @@ def add_assistant_message(
         message_data["elapsed_running_time"] = elapsed_running_time
     if total_cost is not None:
         message_data["total_cost"] = total_cost
+    
+    # Always store run mode flags
+    message_data["web_search"] = web_search
+    message_data["quick_mode"] = quick_mode
+    message_data["coding_mode"] = coding_mode
     
     conversation["messages"].append(message_data)
 

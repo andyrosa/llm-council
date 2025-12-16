@@ -114,3 +114,18 @@
 .model-toggle.disabled .model-expensive-icon {
   color: #9ca3af;
 }
+
+.model-code-icon {
+  font-size: 15px;
+  line-height: 1;
+  margin-right: 4px;
+  color: #7c3aed;
+}
+
+.model-toggle.enabled .model-code-icon {
+  color: #c4b5fd;
+}
+
+.model-toggle.disabled .model-code-icon {
+  color: #9ca3af;
+}

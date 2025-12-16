@@ -7,7 +7,7 @@ import { formatStats } from '../utils/stats';
 import { generateStatsGraph } from '../utils/graph';
 import './Stage3.css';
 
-export default function Stage3({ finalResponse, stage1, stage2, aggregateRankings, conversationTitle, elapsedRunningTime, totalCost }) {
+export default function Stage3({ finalResponse, stage1, stage2, aggregateRankings, conversationTitle, elapsedRunningTime, totalCost, webSearch, quickMode, codingMode }) {
   if (!finalResponse) {
     return null;
   }
@@ -120,6 +120,13 @@ export default function Stage3({ finalResponse, stage1, stage2, aggregateRanking
           <div className="total-stats">
             <span className="total-stats-label">Elapsed running time and total cost:</span>
             <span className="total-stats-value">{totalStats}</span>
+            {(webSearch || quickMode || codingMode) && (
+              <span className="run-mode-badges">
+                {webSearch && <span className="run-mode-badge badge-search">🔍 Search</span>}
+                {codingMode && <span className="run-mode-badge badge-coding">💻 Code</span>}
+                {quickMode && <span className="run-mode-badge badge-quick">⚡ Quick</span>}
+              </span>
+            )}
           </div>
         )}
         <div className="final-text markdown-content">

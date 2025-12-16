@@ -46,13 +46,16 @@ function ModelBar() {
     return parts[parts.length - 1];
   };
 
-  const buildTitle = (model, notes, canBrowse, isChairman) => {
+  const buildTitle = (model, notes, canBrowse, canCode, isChairman) => {
     const extras = [];
     if (notes) {
       extras.push(notes);
     }
     if (canBrowse) {
       extras.push('Can browse web');
+    }
+    if (canCode) {
+      extras.push('Coding model');
     }
     if (isChairman) {
       extras.push('Acts as chairman');
@@ -67,13 +70,13 @@ function ModelBar() {
 
   return (
     <div className="model-bar">
-      {models.map(({ model, enabled, notes, expensive, can_browse: canBrowse, is_chairman: isChairman }) => (
+      {models.map(({ model, enabled, notes, expensive, can_browse: canBrowse, can_code: canCode, is_chairman: isChairman }) => (
         <button
           type="button"
           key={model}
           className={`model-toggle ${enabled ? 'enabled' : 'disabled'}${notes ? ' has-note' : ''}`}
           onClick={(event) => handleToggle(event, model, enabled)}
-          title={buildTitle(model, notes, canBrowse, isChairman)}
+          title={buildTitle(model, notes, canBrowse, canCode, isChairman)}
         >
           {isChairman && (
             <span
@@ -103,6 +106,16 @@ function ModelBar() {
               title="Can browse web"
             >
               🔎
+            </span>
+          )}
+          {canCode && (
+            <span
+              className="model-code-icon"
+              role="img"
+              aria-label="Coding model"
+              title="Coding model"
+            >
+              💻
             </span>
           )}
           <span

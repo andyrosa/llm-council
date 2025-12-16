@@ -61,6 +61,7 @@ class SendMessageRequest(BaseModel):
     content: str
     web_search: bool = False
     majority_mode: bool = False
+    coding_mode: bool = False
 
 
 class ModelToggleRequest(BaseModel):
@@ -171,7 +172,9 @@ async def send_message(conversation_id: str, request: SendMessageRequest):
         stage3_result,
         metadata,
         elapsed_running_time=elapsed_running_time,
-        total_cost=total_cost
+        total_cost=total_cost,
+        web_search=request.web_search,
+        quick_mode=request.majority_mode
     )
 
     # Return the complete response with metadata
@@ -312,11 +315,14 @@ async def send_message_stream(conversation_id: str, request: SendMessageRequest)
                     "aggregate_rankings": aggregate_rankings,
                 },
                 elapsed_running_time=elapsed_running_time,
-                total_cost=total_cost
+                total_cost=total_cost,
+                web_search=request.web_search,
+                quick_mode=request.majority_mode,
+                coding_mode=request.coding_mode
             )
 
-            # Send timing and cost data
-            yield f"data: {json.dumps({'type': 'timing_complete', 'data': {'elapsed_running_time': elapsed_running_time, 'total_cost': total_cost}})}\n\n"
+            # Send timing, cost, and run mode data
+            yield f"data: {json.dumps({'type': 'timing_complete', 'data': {'elapsed_running_time': elapsed_running_time, 'total_cost': total_cost, 'web_search': request.web_search, 'quick_mode': request.majority_mode, 'coding_mode': request.coding_mode}})}\n\n"
 
             # Send completion event
             yield f"data: {json.dumps({'type': 'complete'})}\n\n"
@@ -345,6 +351,7 @@ async def get_models():
     active_chairman = get_active_chairman_model(model_state)
     notes = {}
     browse_capable_models = set()
+    coding_capable_models = set()
     expensive_models = set()
     for entry in registry_entries:
         model_id = entry.get("id")
@@ -361,6 +368,9 @@ async def get_models():
                 can_browse = capabilities.get("web_search")
             if can_browse:
                 browse_capable_models.add(model_id)
+            can_code = capabilities.get("coding")
+            if can_code:
+                coding_capable_models.add(model_id)
     models_state = model_state.get("models") if isinstance(model_state, dict) else {}
 
     all_models = get_all_models()
@@ -382,6 +392,7 @@ async def get_models():
             "enabled": enabled,
             "is_base": is_base,
             "can_browse": model in browse_capable_models,
+            "can_code": model in coding_capable_models,
             "expensive": model in expensive_models,
             "is_chairman": model == active_chairman,
         }

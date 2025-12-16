@@ -130,10 +130,11 @@ export const api = {
    * @param {string} content - The message content
    * @param {boolean} webSearch - Whether to enable web search
    * @param {boolean} majorityMode - Whether to enable majority mode (advance stages at 50%+ responses)
+   * @param {boolean} codingMode - Whether to enable coding mode (use coding-capable models)
    * @param {function} onEvent - Callback function for each event: (eventType, data) => void
    * @returns {Promise<void>}
    */
-  async sendMessageStream(conversationId, content, webSearch, majorityMode, onEvent) {
+  async sendMessageStream(conversationId, content, webSearch, majorityMode, codingMode, onEvent) {
     const response = await fetch(
       `${API_BASE}/api/conversations/${conversationId}/message/stream`,
       {
@@ -141,7 +142,7 @@ export const api = {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ content, web_search: webSearch, majority_mode: majorityMode }),
+        body: JSON.stringify({ content, web_search: webSearch, majority_mode: majorityMode, coding_mode: codingMode }),
       }
     );
 

@@ -14,6 +14,8 @@ export default function ChatInterface({
   const [input, setInput] = useState('');
   const [webSearchMode, setWebSearchMode] = useState('auto'); // 'auto' | 'on' | 'off'
   const [webSearchAnimating, setWebSearchAnimating] = useState(false);
+  const [codingMode, setCodingMode] = useState('auto'); // 'auto' | 'on' | 'off'
+  const [codingAnimating, setCodingAnimating] = useState(false);
   const [majorityMode, setMajorityMode] = useState('auto'); // 'auto' | 'on' | 'off'
   const [majorityAnimating, setMajorityAnimating] = useState(false);
   const messagesEndRef = useRef(null);
@@ -21,6 +23,10 @@ export default function ChatInterface({
   const hasWebSearchWord = /\b(search|today|recent|news)\b/i.test(input);
   const autoWebSearchDetected = webSearchMode === 'auto' && hasWebSearchWord;
   const webSearchEnabled = webSearchMode === 'on' || autoWebSearchDetected;
+
+  const hasCodingWord = /\b(code|program|programming|function|script|debug)\b/i.test(input);
+  const autoCodingDetected = codingMode === 'auto' && hasCodingWord;
+  const codingEnabled = codingMode === 'on' || autoCodingDetected;
 
   const hasMajorityWord = /\b(quick|majority)\b/i.test(input);
   const autoMajorityDetected = majorityMode === 'auto' && hasMajorityWord;
@@ -40,6 +46,18 @@ export default function ChatInterface({
       };
     }
   }, [hasWebSearchWord, webSearchMode]);
+
+  // Animate when auto-detection triggers coding mode
+  useEffect(() => {
+    if (codingMode === 'auto' && hasCodingWord) {
+      const startTimer = setTimeout(() => setCodingAnimating(true), 0);
+      const stopTimer = setTimeout(() => setCodingAnimating(false), 600);
+      return () => {
+        clearTimeout(startTimer);
+        clearTimeout(stopTimer);
+      };
+    }
+  }, [hasCodingWord, codingMode]);
 
   // Animate when auto-detection triggers majority mode
   useEffect(() => {
@@ -71,6 +89,16 @@ export default function ChatInterface({
     }
   };
 
+  const handleCodingToggle = () => {
+    if (codingMode === 'auto') {
+      setCodingMode('on');
+    } else if (codingMode === 'on') {
+      setCodingMode('off');
+    } else {
+      setCodingMode('auto');
+    }
+  };
+
   const handleMajorityToggle = () => {
     if (majorityMode === 'auto') {
       setMajorityMode('on');
@@ -84,9 +112,10 @@ export default function ChatInterface({
   const handleSubmit = (e) => {
     e.preventDefault();
     if (input.trim() && !isLoading) {
-      onSendMessage(input, webSearchEnabled, majorityEnabled);
+      onSendMessage(input, webSearchEnabled, majorityEnabled, codingEnabled);
       setInput('');
       setWebSearchMode('auto');
+      setCodingMode('auto');
       setMajorityMode('auto');
     }
   };
@@ -196,6 +225,9 @@ export default function ChatInterface({
                       conversationTitle={conversationTitle}
                       elapsedRunningTime={msg.elapsed_running_time}
                       totalCost={msg.total_cost}
+                      webSearch={msg.web_search}
+                      quickMode={msg.quick_mode}
+                      codingMode={msg.coding_mode}
                     />
                   )}
                 </div>
@@ -234,6 +266,15 @@ export default function ChatInterface({
                 <span className={`web-search-indicator ${webSearchEnabled ? 'on' : 'off'}`} />
                 <span className="web-search-label">
                   Web {webSearchMode === 'auto' ? '(auto)' : webSearchMode === 'on' ? 'on' : 'off'}
+                </span>
+              </label>
+              <label
+                className={`coding-toggle ${codingAnimating ? 'animating' : ''} ${codingEnabled ? 'enabled' : ''}`}
+                onClick={handleCodingToggle}
+              >
+                <span className={`coding-indicator ${codingEnabled ? 'on' : 'off'}`} />
+                <span className="coding-label">
+                  Code {codingMode === 'auto' ? '(auto)' : codingMode === 'on' ? 'on' : 'off'}
                 </span>
               </label>
               <label

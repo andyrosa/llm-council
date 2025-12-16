@@ -1,56 +1,77 @@
 {
   "models": [
     {
-      "id": "anthropic/claude-opus-4.5"
+      "id": "anthropic/claude-opus-4.5",
+      "capabilities": {
+        "coding": false
+      }
     },
     {
       "id": "openai/gpt-5-pro",
       "notes": "very slow",
-      "expensive": true
+      "expensive": true,
+      "capabilities": {
+        "coding": false
+      }
     },
     {
-      "id": "openai/gpt-5.1-codex"
+      "id": "openai/gpt-5.1-codex",
+      "capabilities": {
+        "coding": true
+      }
     },
     {
       "id": "openai/gpt-5.1-codex-max",
       "capabilities": {
-        "can_browse": true
+        "can_browse": true,
+        "coding": true
       }
     },
     {
       "id": "openai/gpt-5.1",
       "capabilities": {
-        "can_browse": true
+        "can_browse": true,
+        "coding": false
       }
     },
     {
       "id": "openai/gpt-5.2",
       "capabilities": {
-        "can_browse": true
+        "can_browse": true,
+        "coding": false
       }
     },
     {
-      "id": "moonshotai/kimi-k2-thinking"
+      "id": "moonshotai/kimi-k2-thinking",
+      "capabilities": {
+        "coding": false
+      }
     },
     {
       "id": "x-ai/grok-4.1-fast",
       "capabilities": {
-        "can_browse": true
+        "can_browse": true,
+        "coding": false
       }
     },
     {
-      "id": "x-ai/grok-code-fast-1"
+      "id": "x-ai/grok-code-fast-1",
+      "capabilities": {
+        "coding": true
+      }
     },
     {
       "id": "x-ai/grok-4",
       "capabilities": {
-        "can_browse": true
+        "can_browse": true,
+        "coding": false
       }
     },
     {
       "id": "x-ai/grok-4-fast",
       "capabilities": {
-        "can_browse": true
+        "can_browse": true,
+        "coding": false
       }
     }
   ]

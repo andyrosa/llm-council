@@ -138,6 +138,7 @@ async def query_models_streaming(
     # Create named tasks for all models - store model name with each task
     tasks = {}
     for model in models:
+        # Enable web search only if global flag is on AND model supports it (or no filter provided)
         model_web_search = web_search and (web_search_models is None or model in web_search_models)
         task = asyncio.create_task(query_model(model, messages, timeout=timeout, web_search=model_web_search))
         tasks[task] = model

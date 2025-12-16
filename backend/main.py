@@ -225,7 +225,7 @@ async def send_message_stream(conversation_id: str, request: SendMessageRequest)
                 yield f"data: {json.dumps({'type': 'stage1_start'})}\n\n"
                 
                 stage1_majority_results = None
-                async for event in stage1_collect_responses_streaming(request.content, request.web_search, majority_mode=True):
+                async for event in stage1_collect_responses_streaming(request.content, request.web_search, majority_mode=True, coding_mode=request.coding_mode):
                     if event['type'] == 'model_complete':
                         yield f"data: {json.dumps({'type': 'stage1_model_complete', 'model': event['model'], 'response': event['response'], 'completed': event['completed'], 'total': event['total']})}\n\n"
                     elif event['type'] == 'model_failed':
@@ -278,7 +278,7 @@ async def send_message_stream(conversation_id: str, request: SendMessageRequest)
                 # Standard non-streaming mode
                 # Stage 1: Collect responses
                 yield f"data: {json.dumps({'type': 'stage1_start'})}\n\n"
-                stage1_results = await stage1_collect_responses(request.content, request.web_search)
+                stage1_results = await stage1_collect_responses(request.content, request.web_search, request.coding_mode)
                 yield f"data: {json.dumps({'type': 'stage1_complete', 'data': stage1_results})}\n\n"
 
                 # Stage 2: Collect rankings

@@ -6,7 +6,7 @@ import asyncio
 import math
 from typing import List, Dict, Any, Tuple, AsyncGenerator
 from .openrouter import query_models_parallel, query_model, query_models_streaming
-from .config import get_council_models_active, get_active_chairman_model, get_browse_capable_models
+from .config import get_council_models_active, get_active_chairman_model, get_browse_capable_models, get_coding_capable_models
 
 CHAIRMAN_INSTRUCTIONS_PATH = os.path.join(os.path.dirname(__file__), "..", "data", "chairman_instructions.json")
 
@@ -20,13 +20,14 @@ def load_chairman_prompt_override() -> str:
     return data.get("prompt", "")
 
 
-async def stage1_collect_responses(user_query: str, web_search: bool = False) -> List[Dict[str, Any]]:
+async def stage1_collect_responses(user_query: str, web_search: bool = False, coding_mode: bool = False) -> List[Dict[str, Any]]:
     """
     Stage 1: Collect individual responses from all council models.
 
     Args:
         user_query: The user's question
         web_search: Whether to enable web search
+        coding_mode: Whether coding mode is enabled
 
     Returns:
         List of dicts with 'model', 'response', 'elapsed_time', 'usage', and 'cost' keys
@@ -34,6 +35,15 @@ async def stage1_collect_responses(user_query: str, web_search: bool = False) ->
     messages = [{"role": "user", "content": user_query}]
     models = get_council_models_active()
     browse_capable = get_browse_capable_models() if web_search else None
+    coding_capable = get_coding_capable_models()
+    
+    # Filter out coding models unless coding_mode is set,
+    # or web_search is set and the model can browse
+    if not coding_mode:
+        models = [
+            m for m in models
+            if m not in coding_capable or (web_search and browse_capable and m in browse_capable)
+        ]
 
     # Query all models in parallel
     responses = await query_models_parallel(models, messages, web_search=web_search, web_search_models=browse_capable)
@@ -95,7 +105,8 @@ async def stage1_collect_responses(user_query: str, web_search: bool = False) ->
 async def stage1_collect_responses_streaming(
     user_query: str, 
     web_search: bool = False,
-    majority_mode: bool = False
+    majority_mode: bool = False,
+    coding_mode: bool = False
 ) -> AsyncGenerator[Dict[str, Any], None]:
     """
     Stage 1: Collect individual responses from all council models, streaming results.
@@ -475,7 +486,8 @@ Provide a clear, well-reasoned final answer that represents the council's collec
         # Fallback if chairman fails
         return {
             "model": chairman_model,
-            "response": "Error: Unable to generate final synthesis."
+            "response": "Error: Unable to generate final synthesis.",
+            "custom_chairman_instructions": bool(prompt_override),
         }
 
     return {
@@ -483,6 +495,7 @@ Provide a clear, well-reasoned final answer that represents the council's collec
         "response": response.get('content', ''),
         "elapsed_time": response.get('elapsed_time'),
         "cost": response.get('cost'),
+        "custom_chairman_instructions": bool(prompt_override),
     }
 
 

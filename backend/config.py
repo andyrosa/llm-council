@@ -127,6 +127,21 @@ def get_browse_capable_models() -> set:
     return browse_capable
 
 
+def get_coding_capable_models() -> set:
+    """Return set of model IDs that have coding capability."""
+    registry_entries = load_model_registry()
+    coding_capable = set()
+    for entry in registry_entries:
+        model_id = entry.get("id")
+        if not isinstance(model_id, str):
+            continue
+        capabilities = entry.get("capabilities") or {}
+        if isinstance(capabilities, dict):
+            if capabilities.get("coding"):
+                coding_capable.add(model_id)
+    return coding_capable
+
+
 def get_all_models():
     """Return all available models: base council list plus any additions."""
     _ensure_unique_models(COUNCIL_MODELS, "COUNCIL_MODELS")

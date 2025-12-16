@@ -147,20 +147,32 @@ export function generateStatsGraph(rankings, stage1) {
     data.forEach(d => {
       const x = xScale(d.rank);
       const val = d[yKey];
-      if (val <= 0) return;
-
-      const y = yScale(val);
+      
+      // For zero values, plot at the bottom of the chart with a different marker
+      const isZero = val <= 0;
+      const y = isZero ? startY : yScale(val);
 
       ctx.beginPath();
-      ctx.fillStyle = '#2d8a2d';
+      // Use a different color for zero values to indicate they're at $0
+      ctx.fillStyle = isZero ? '#888' : '#2d8a2d';
       ctx.arc(x, y, 5, 0, Math.PI * 2);
       ctx.fill();
+      
+      // Add a small indicator line for zero values
+      if (isZero) {
+        ctx.strokeStyle = '#888';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(x - 3, y);
+        ctx.lineTo(x + 3, y);
+        ctx.stroke();
+      }
 
       // Label
       ctx.fillStyle = '#444';
       ctx.font = '10px sans-serif';
       ctx.textAlign = 'left';
-      ctx.fillText(d.name, x + 8, y + 3);
+      ctx.fillText(d.name + (isZero ? ' ($0)' : ''), x + 8, y + 3);
     });
   };
 

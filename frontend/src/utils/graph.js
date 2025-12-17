@@ -1,9 +1,9 @@
 export function generateStatsGraph(rankings, stage1) {
-  const width = 1200;
-  const height = 400;
-  const padding = 80;
-  const gap = 100;
-  const rightMargin = 150;
+  const width = 1400;
+  const height = 520;
+  const padding = 100;
+  const gap = 120;
+  const rightMargin = 180;
   const canvas = document.createElement('canvas');
   canvas.width = width;
   canvas.height = height;
@@ -29,22 +29,22 @@ export function generateStatsGraph(rankings, stage1) {
 
   // Data prep
   const data = rankings.map(r => {
-    // If stage1 is provided, use it to find delay/cost (Stage 3 logic)
-    // Otherwise assume rankings has total_elapsed_time/total_cost (Stage 2 logic)
-    let delay = 0;
-    let cost = 0;
+    // Use total_elapsed_time/total_cost from aggregate rankings
+    // These include all stages combined
+    let delay = r.total_elapsed_time || 0;
+    let cost = r.total_cost || 0;
 
-    if (stage1) {
+    // Fall back to stage1 data if aggregate totals not available
+    if (stage1 && (delay === 0 || cost === 0)) {
         const s1 = stage1.find(s => s.model === r.model);
-        delay = s1 ? s1.elapsed_time : 0;
-        cost = s1 ? s1.cost : 0;
-    } else {
-        delay = r.total_elapsed_time || 0;
-        cost = r.total_cost || 0;
+        if (s1) {
+            if (delay === 0 && s1.elapsed_time) delay = s1.elapsed_time;
+            if (cost === 0 && s1.cost) cost = s1.cost;
+        }
     }
 
     return {
-      name: (r.model.split('/')[1] || r.model).substring(0, 15), // Short name
+      name: (r.model.split('/')[1] || r.model).substring(0, 20),
       rank: r.average_rank,
       delay: delay,
       cost: cost
@@ -68,7 +68,7 @@ export function generateStatsGraph(rankings, stage1) {
     let yMinVal = yValues.length > 0 ? Math.min(...yValues) : 0.001;
     let yMaxVal = Math.max(...data.map(d => d[yKey]));
     
-    if (yMaxVal <= 0) yMaxVal = 1;
+    if (yMaxVal <= 0) yMaxVal = 0.01;
     if (yMinVal >= yMaxVal) yMinVal = yMaxVal / 10;
 
     // Add some padding to log range
@@ -102,14 +102,14 @@ export function generateStatsGraph(rankings, stage1) {
 
     // Title
     ctx.fillStyle = '#333';
-    ctx.font = 'bold 14px sans-serif';
+    ctx.font = 'bold 18px sans-serif';
     ctx.textAlign = 'center';
     ctx.fillText(title, startX + plotWidth / 2, padding / 2);
 
     // Show timed-out models note (only on the delay plot, which is the first one)
     if (yKey === 'delay' && timedOutModels.length > 0) {
       ctx.fillStyle = 'red';
-      ctx.font = '10px sans-serif';
+      ctx.font = '14px sans-serif';
       ctx.textAlign = 'center';
       const timeoutText = 'Timed out: ' + timedOutModels.join(', ');
       // Wrap text if too wide
@@ -137,12 +137,12 @@ export function generateStatsGraph(rankings, stage1) {
     }
 
     // Labels
-    ctx.font = '12px sans-serif';
+    ctx.font = '16px sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText('Rank (lower is better)', startX + plotWidth / 2, height - 10);
+    ctx.fillText('Rank (lower is better)', startX + plotWidth / 2, height - 20);
     
     ctx.save();
-    ctx.translate(startX - 65, startY - plotHeight / 2);
+    ctx.translate(startX - 70, startY - plotHeight / 2);
     ctx.rotate(-Math.PI / 2);
     ctx.fillText(yLabel + ' (Log Scale)', 0, 0);
     ctx.restore();
@@ -153,7 +153,7 @@ export function generateStatsGraph(rankings, stage1) {
     ctx.fillStyle = '#666';
     ctx.textAlign = 'right';
     ctx.textBaseline = 'middle';
-    ctx.font = '10px sans-serif';
+    ctx.font = '14px sans-serif';
 
     for (let i = 0; i <= 5; i++) {
         const ratio = i / 5;
@@ -187,8 +187,9 @@ export function generateStatsGraph(rankings, stage1) {
         }
     }
 
-    // Points
-    data.forEach(d => {
+    // Points - track label positions to avoid overlap
+    const labelPositions = [];
+    data.forEach((d, idx) => {
       const x = xScale(d.rank);
       const val = d[yKey];
       
@@ -212,11 +213,36 @@ export function generateStatsGraph(rankings, stage1) {
         ctx.stroke();
       }
 
-      // Label
+      // Calculate label position with collision avoidance
+      const labelText = d.name;
+      ctx.font = '14px sans-serif';
+      const textWidth = ctx.measureText(labelText).width;
+      const labelHeight = 18;
+      
+      let labelX = x + 8;
+      let labelY = y + 5;
+      let placeAbove = false;
+      
+      // Check for collisions with existing labels
+      for (const pos of labelPositions) {
+        const xOverlap = labelX < pos.x + pos.width && labelX + textWidth > pos.x;
+        const yOverlap = Math.abs(pos.y - labelY) < labelHeight;
+        if (xOverlap && yOverlap) {
+          placeAbove = true;
+          break;
+        }
+      }
+      
+      if (placeAbove) {
+        labelY = y - 10 - (idx % 3) * labelHeight; // Stagger vertically
+      }
+      
+      labelPositions.push({ x: labelX, y: labelY, width: textWidth });
+
       ctx.fillStyle = '#444';
-      ctx.font = '10px sans-serif';
+      ctx.font = '14px sans-serif';
       ctx.textAlign = 'left';
-      ctx.fillText(d.name + (isZero ? ' ($0)' : ''), x + 8, y + 3);
+      ctx.fillText(labelText, labelX, labelY);
     });
   };
 

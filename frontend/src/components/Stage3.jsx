@@ -136,7 +136,7 @@ export default function Stage3({ finalResponse, stage1, stage2, aggregateRanking
         </div>
         {finalResponse.custom_chairman_instructions && (
           <div className="chairman-footnote">
-            * Custom chairman instructions in effect
+            * Custom chairman instructions: {finalResponse.custom_chairman_instructions}
           </div>
         )}
       </div>

@@ -2,7 +2,6 @@
 
 import json
 import os
-import asyncio
 import math
 from typing import List, Dict, Any, Tuple, AsyncGenerator
 from .openrouter import query_models_parallel, query_model, query_models_streaming
@@ -34,7 +33,7 @@ async def stage1_collect_responses(user_query: str, web_search: bool = False, co
     """
     messages = [{"role": "user", "content": user_query}]
     models = get_council_models_active()
-    browse_capable = get_browse_capable_models() if web_search else None
+    browse_capable = get_browse_capable_models() if web_search else set()
     coding_capable = get_coding_capable_models()
     
     # Filter out coding models unless coding_mode is set,
@@ -63,7 +62,7 @@ async def stage1_collect_responses(user_query: str, web_search: bool = False, co
     retry_responses = {}
     if failed_models:
         print(f"Retrying failed models {failed_models} with timeout {retry_timeout}s")
-        retry_responses = await query_models_parallel(failed_models, messages, timeout=retry_timeout, web_search=web_search, web_search_models=browse_capable)
+        retry_responses = await query_models_parallel(failed_models, messages, timeout=retry_timeout, web_search=web_search, web_search_models=browse_capable or set())
 
     # Format results in original model order; keep first-attempt placeholder, add retry only if it responded
     stage1_results = []
@@ -125,7 +124,7 @@ async def stage1_collect_responses_streaming(
     """
     messages = [{"role": "user", "content": user_query}]
     models = get_council_models_active()
-    browse_capable = get_browse_capable_models() if web_search else None
+    browse_capable = get_browse_capable_models() if web_search else set()
     coding_capable = get_coding_capable_models()
     
     # Filter out coding models unless coding_mode is set,

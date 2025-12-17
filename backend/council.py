@@ -487,7 +487,7 @@ Provide a clear, well-reasoned final answer that represents the council's collec
         return {
             "model": chairman_model,
             "response": "Error: Unable to generate final synthesis.",
-            "custom_chairman_instructions": bool(prompt_override),
+            "custom_chairman_instructions": prompt_override,
         }
 
     return {
@@ -495,7 +495,7 @@ Provide a clear, well-reasoned final answer that represents the council's collec
         "response": response.get('content', ''),
         "elapsed_time": response.get('elapsed_time'),
         "cost": response.get('cost'),
-        "custom_chairman_instructions": bool(prompt_override),
+        "custom_chairman_instructions": prompt_override,
     }
 
 

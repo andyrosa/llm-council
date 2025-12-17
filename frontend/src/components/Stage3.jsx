@@ -32,7 +32,7 @@ export default function Stage3({ finalResponse, stage1, stage2, aggregateRanking
     // Create filename from conversation title, or use default
     const sanitizeFilename = (name) => {
       return name
-        .replace(/[<>:"\/\\|?*]/g, '') // Remove invalid filename characters
+        .replace(/[<>:"/\\|?*]/g, '') // Remove invalid filename characters
         .replace(/\s+/g, '_') // Replace spaces with underscores
         .substring(0, 100); // Limit length
     };

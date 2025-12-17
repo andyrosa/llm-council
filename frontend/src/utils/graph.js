@@ -27,24 +27,31 @@ export function generateStatsGraph(rankings, stage1) {
     }
   }
 
+  const missingCostModels = [];
+
   // Data prep
   const data = rankings.map(r => {
     // Use total_elapsed_time/total_cost from aggregate rankings
     // These include all stages combined
-    let delay = r.total_elapsed_time || 0;
-    let cost = r.total_cost || 0;
+    let delay = r.total_elapsed_time ?? null;
+    let cost = r.total_cost ?? null;
 
     // Fall back to stage1 data if aggregate totals not available
-    if (stage1 && (delay === 0 || cost === 0)) {
+    if (stage1 && (delay === null || cost === null)) {
         const s1 = stage1.find(s => s.model === r.model);
         if (s1) {
-            if (delay === 0 && s1.elapsed_time) delay = s1.elapsed_time;
-            if (cost === 0 && s1.cost) cost = s1.cost;
+            if (delay === null && s1.elapsed_time !== null && s1.elapsed_time !== undefined) delay = s1.elapsed_time;
+            if (cost === null && s1.cost !== null && s1.cost !== undefined) cost = s1.cost;
         }
     }
 
+    const shortName = (r.model.split('/')[1] || r.model).substring(0, 20);
+    if (cost === null || cost === undefined) {
+      missingCostModels.push(shortName);
+    }
+
     return {
-      name: (r.model.split('/')[1] || r.model).substring(0, 20),
+      name: shortName,
       rank: r.average_rank,
       delay: delay,
       cost: cost
@@ -64,9 +71,11 @@ export function generateStatsGraph(rankings, stage1) {
     const xMax = Math.max(...data.map(d => d.rank));
     
     // Log scale Y setup
-    const yValues = data.map(d => d[yKey]).filter(v => v > 0);
+    const yValues = data
+      .map(d => d[yKey])
+      .filter(v => typeof v === 'number' && Number.isFinite(v) && v > 0);
     let yMinVal = yValues.length > 0 ? Math.min(...yValues) : 0.001;
-    let yMaxVal = Math.max(...data.map(d => d[yKey]));
+    let yMaxVal = yValues.length > 0 ? Math.max(...yValues) : 0.01;
     
     if (yMaxVal <= 0) yMaxVal = 0.01;
     if (yMinVal >= yMaxVal) yMinVal = yMaxVal / 10;
@@ -136,6 +145,35 @@ export function generateStatsGraph(rankings, stage1) {
       }
     }
 
+    // Show missing-cost models note (only on the cost plot)
+    if (yKey === 'cost' && missingCostModels.length > 0) {
+      ctx.fillStyle = 'red';
+      ctx.font = '14px sans-serif';
+      ctx.textAlign = 'center';
+      const missingText = 'No cost returned: ' + missingCostModels.join(', ');
+      const maxWidth = plotWidth;
+      const words = missingText.split(' ');
+      let lines = [];
+      let currentLine = '';
+      for (const word of words) {
+        const testLine = currentLine ? currentLine + ' ' + word : word;
+        const metrics = ctx.measureText(testLine);
+        if (metrics.width > maxWidth && currentLine) {
+          lines.push(currentLine);
+          currentLine = word;
+        } else {
+          currentLine = testLine;
+        }
+      }
+      if (currentLine) lines.push(currentLine);
+
+      let yOffset = padding / 2 + 14;
+      for (const line of lines) {
+        ctx.fillText(line, startX + plotWidth / 2, yOffset);
+        yOffset += 12;
+      }
+    }
+
     // Labels
     ctx.font = '16px sans-serif';
     ctx.textAlign = 'center';
@@ -192,6 +230,10 @@ export function generateStatsGraph(rankings, stage1) {
     data.forEach((d, idx) => {
       const x = xScale(d.rank);
       const val = d[yKey];
+
+      if (val === null || val === undefined) {
+        return;
+      }
       
       // For zero values, plot at the bottom of the chart with a different marker
       const isZero = val <= 0;

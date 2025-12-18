@@ -1,9 +1,9 @@
-export function generateStatsGraph(rankings, stage1) {
-  const width = 1400;
+export function generateStatsGraph(rankings, stage1, stage2) {
+  const width = 1900;
   const height = 520;
   const padding = 100;
-  const gap = 120;
-  const rightMargin = 180;
+  const gap = 80;
+  const rightMargin = 100;
   const canvas = document.createElement('canvas');
   canvas.width = width;
   canvas.height = height;
@@ -14,14 +14,28 @@ export function generateStatsGraph(rankings, stage1) {
   ctx.fillRect(0, 0, width, height);
 
   // Identify timed-out models from stage1 (elapsed_time is null and response indicates failure)
-  const timedOutModels = [];
+  const timedOutStage1Models = [];
   if (stage1) {
     for (const s of stage1) {
       if (s.elapsed_time === null || s.elapsed_time === undefined) {
         const response = s.response || '';
         if (response.includes('No response') || response.toLowerCase().includes('did not reply')) {
           const shortName = (s.model.split('/')[1] || s.model).substring(0, 20);
-          timedOutModels.push(shortName);
+          timedOutStage1Models.push(shortName);
+        }
+      }
+    }
+  }
+
+  // Identify timed-out models from stage2
+  const timedOutStage2Models = [];
+  if (stage2) {
+    for (const s of stage2) {
+      if (s.elapsed_time === null || s.elapsed_time === undefined) {
+        const response = s.response || '';
+        if (response.includes('No response') || response.toLowerCase().includes('did not reply')) {
+          const shortName = (s.model.split('/')[1] || s.model).substring(0, 20);
+          timedOutStage2Models.push(shortName);
         }
       }
     }
@@ -31,18 +45,24 @@ export function generateStatsGraph(rankings, stage1) {
 
   // Data prep
   const data = rankings.map(r => {
-    // Use total_elapsed_time/total_cost from aggregate rankings
-    // These include all stages combined
-    let delay = r.total_elapsed_time ?? null;
+    let stage1Time = null;
+    let stage2Time = null;
     let cost = r.total_cost ?? null;
 
-    // Fall back to stage1 data if aggregate totals not available
-    if (stage1 && (delay === null || cost === null)) {
-        const s1 = stage1.find(s => s.model === r.model);
-        if (s1) {
-            if (delay === null && s1.elapsed_time !== null && s1.elapsed_time !== undefined) delay = s1.elapsed_time;
-            if (cost === null && s1.cost !== null && s1.cost !== undefined) cost = s1.cost;
-        }
+    // Get stage1 time
+    if (stage1) {
+      const s1 = stage1.find(s => s.model === r.model);
+      if (s1 && s1.elapsed_time !== null && s1.elapsed_time !== undefined) {
+        stage1Time = s1.elapsed_time;
+      }
+    }
+
+    // Get stage2 time
+    if (stage2) {
+      const s2 = stage2.find(s => s.model === r.model);
+      if (s2 && s2.elapsed_time !== null && s2.elapsed_time !== undefined) {
+        stage2Time = s2.elapsed_time;
+      }
     }
 
     const shortName = (r.model.split('/')[1] || r.model).substring(0, 20);
@@ -53,12 +73,13 @@ export function generateStatsGraph(rankings, stage1) {
     return {
       name: shortName,
       rank: r.average_rank,
-      delay: delay,
+      stage1Time: stage1Time,
+      stage2Time: stage2Time,
       cost: cost
     };
   });
 
-  const plotWidth = (width - (padding * 2) - gap - rightMargin) / 2;
+  const plotWidth = (width - (padding * 2) - (gap * 2) - rightMargin) / 3;
 
   // Helper to draw a plot
   const drawPlot = (offsetX, title, yKey, yLabel, formatY) => {
@@ -115,12 +136,40 @@ export function generateStatsGraph(rankings, stage1) {
     ctx.textAlign = 'center';
     ctx.fillText(title, startX + plotWidth / 2, padding / 2);
 
-    // Show timed-out models note (only on the delay plot, which is the first one)
-    if (yKey === 'delay' && timedOutModels.length > 0) {
+    // Show timed-out models note (only on the stage1Time and stage2Time plots)
+    if (yKey === 'stage1Time' && timedOutStage1Models.length > 0) {
       ctx.fillStyle = 'red';
       ctx.font = '14px sans-serif';
       ctx.textAlign = 'center';
-      const timeoutText = 'Timed out: ' + timedOutModels.join(', ');
+      const timeoutText = 'Timed out: ' + timedOutStage1Models.join(', ');
+      const maxWidth = plotWidth;
+      const words = timeoutText.split(' ');
+      let lines = [];
+      let currentLine = '';
+      for (const word of words) {
+        const testLine = currentLine ? currentLine + ' ' + word : word;
+        const metrics = ctx.measureText(testLine);
+        if (metrics.width > maxWidth && currentLine) {
+          lines.push(currentLine);
+          currentLine = word;
+        } else {
+          currentLine = testLine;
+        }
+      }
+      if (currentLine) lines.push(currentLine);
+      // Draw wrapped lines below title
+      let yOffset = padding / 2 + 14;
+      for (const line of lines) {
+        ctx.fillText(line, startX + plotWidth / 2, yOffset);
+        yOffset += 12;
+      }
+    }
+
+    if (yKey === 'stage2Time' && timedOutStage2Models.length > 0) {
+      ctx.fillStyle = 'red';
+      ctx.font = '14px sans-serif';
+      ctx.textAlign = 'center';
+      const timeoutText = 'Timed out: ' + timedOutStage2Models.join(', ');
       // Wrap text if too wide
       const maxWidth = plotWidth;
       const words = timeoutText.split(' ');
@@ -288,8 +337,9 @@ export function generateStatsGraph(rankings, stage1) {
     });
   };
 
-  drawPlot(0, 'Delay vs Rank', 'delay', 'Seconds', v => Number(v.toPrecision(2)).toString());
-  drawPlot(plotWidth + gap + padding, 'Cost vs Rank', 'cost', 'USD', v => '$' + Number(v.toPrecision(2)).toString());
+  drawPlot(0, 'Stage 1 Time vs Rank', 'stage1Time', 'Seconds', v => Number(v.toPrecision(2)).toString());
+  drawPlot(plotWidth + gap, 'Stage 2 Time vs Rank', 'stage2Time', 'Seconds', v => Number(v.toPrecision(2)).toString());
+  drawPlot((plotWidth + gap) * 2, 'Cost vs Rank', 'cost', 'USD', v => '$' + Number(v.toPrecision(2)).toString());
 
   return canvas.toDataURL('image/png');
 }

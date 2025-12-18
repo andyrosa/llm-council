@@ -213,6 +213,7 @@ export default function ChatInterface({
                       aggregateRankings={msg.metadata?.aggregate_rankings}
                       progress={msg.progress?.stage2}
                       stage1={msg.stage1}
+                      stage2={msg.stage2}
                     />
                   )}
 

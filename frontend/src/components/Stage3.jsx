@@ -50,7 +50,7 @@ export default function Stage3({ finalResponse, stage1, stage2, aggregateRanking
     if (aggregateRankings && stage1 && stage2) {
       // Generate graph
       try {
-        const graphBase64 = generateStatsGraph(aggregateRankings, stage1);
+        const graphBase64 = generateStatsGraph(aggregateRankings, stage1, stage2);
         md += `\n# Performance Analysis\n\n`;
         md += `![Performance Graph](${graphBase64})\n\n`;
       } catch (e) {

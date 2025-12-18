@@ -73,6 +73,12 @@
         "can_browse": true,
         "coding": false
       }
+    },
+    {
+      "id": "google/gemini-3-flash-preview",
+      "capabilities": {
+        "coding": false
+      }
     }
   ]
 }

@@ -271,6 +271,23 @@ def print_table(rows) -> None:
         )
 
 
+def get_pareto_frontier(points):
+    """
+    Finds the Pareto frontier for a set of points where lower is better for both dimensions.
+    points: list of (x, y, label) tuples
+    Returns: list of (x, y, label) tuples on the frontier, sorted by x.
+    """
+    # Sort by x ascending, then y ascending
+    sorted_points = sorted(points, key=lambda p: (p[0], p[1]))
+    frontier = []
+    min_y = float('inf')
+    for p in sorted_points:
+        if p[1] < min_y:
+            frontier.append(p)
+            min_y = p[1]
+    return frontier
+
+
 def plot_rows(
     rows,
     output_path: str,
@@ -327,6 +344,12 @@ def plot_rows(
             # Set wrap width to match axes width
             axes[0].texts[-1]._get_wrap_line_width = lambda: axes[0].get_window_extent().width
 
+        # Add Pareto frontier
+        frontier = get_pareto_frontier(pct_delay)
+        if frontier:
+            fx, fy, _ = zip(*frontier)
+            axes[0].plot(fx, fy, color='red', linestyle='--', alpha=0.5, label='Pareto Frontier')
+
         axes[0].set_title("Delay vs. Percentile", pad=18)
         axes[0].grid(True, alpha=0.2, which="both")
     else:
@@ -343,6 +366,12 @@ def plot_rows(
 
         axes[1].yaxis.set_major_formatter(FuncFormatter(lambda x, _: f"{x:.2g}"))
         axes[1].yaxis.set_minor_formatter(FuncFormatter(lambda x, _: f"{x:.2g}"))
+
+        # Add Pareto frontier
+        frontier = get_pareto_frontier(pct_cost)
+        if frontier:
+            fx, fy, _ = zip(*frontier)
+            axes[1].plot(fx, fy, color='red', linestyle='--', alpha=0.5, label='Pareto Frontier')
 
         axes[1].set_title("Cost vs. Percentile (cents)", pad=18)
         axes[1].grid(True, alpha=0.2, which="both")

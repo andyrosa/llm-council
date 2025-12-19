@@ -81,6 +81,26 @@ export function generateStatsGraph(rankings, stage1, stage2) {
 
   const plotWidth = (width - (padding * 2) - (gap * 2) - rightMargin) / 3;
 
+  // Helper to find Pareto frontier (minimize x and y)
+  const getParetoFrontier = (points) => {
+    // Sort by x ascending, then y ascending
+    const sorted = [...points].sort((a, b) => {
+      if (a.x !== b.x) return a.x - b.x;
+      return a.y - b.y;
+    });
+    
+    const frontier = [];
+    let minY = Infinity;
+    
+    for (const p of sorted) {
+      if (p.y < minY) {
+        frontier.push(p);
+        minY = p.y;
+      }
+    }
+    return frontier;
+  };
+
   // Helper to draw a plot
   const drawPlot = (offsetX, title, yKey, yLabel, formatY) => {
     const plotHeight = height - (padding * 2);
@@ -272,6 +292,38 @@ export function generateStatsGraph(rankings, stage1, stage2) {
         if (xPos >= startX && xPos <= startX + plotWidth) {
              ctx.fillText(r.toString(), xPos, startY + 5);
         }
+    }
+
+    // Draw Pareto Frontier
+    const validPoints = data
+      .filter(d => {
+        const val = d[yKey];
+        return typeof val === 'number' && Number.isFinite(val);
+      })
+      .map(d => ({ x: d.rank, y: d[yKey] }));
+
+    const frontier = getParetoFrontier(validPoints);
+    
+    if (frontier.length > 0) {
+      ctx.beginPath();
+      ctx.strokeStyle = 'rgba(255, 0, 0, 0.5)'; // Red, semi-transparent
+      ctx.lineWidth = 2;
+      ctx.setLineDash([5, 5]); // Dashed line
+      
+      let first = true;
+      for (const p of frontier) {
+        const px = xScale(p.x);
+        const py = (p.y <= 0) ? startY : yScale(p.y);
+        
+        if (first) {
+          ctx.moveTo(px, py);
+          first = false;
+        } else {
+          ctx.lineTo(px, py);
+        }
+      }
+      ctx.stroke();
+      ctx.setLineDash([]); // Reset dash
     }
 
     // Points - track label positions to avoid overlap

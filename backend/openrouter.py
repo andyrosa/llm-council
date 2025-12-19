@@ -7,7 +7,7 @@ from typing import List, Dict, Any, Optional
 from .config import OPENROUTER_API_KEY, OPENROUTER_API_URL
 
 
-async def get_generation_cost(generation_id: str, timeout: float = 10.0) -> Optional[float]:
+async def get_generation_cost(generation_id: str, timeout: float = 2.0) -> Optional[float]:
     """
     Query OpenRouter for the cost of a generation.
     
@@ -25,17 +25,25 @@ async def get_generation_cost(generation_id: str, timeout: float = 10.0) -> Opti
     # Wait a moment for stats to be available
     await asyncio.sleep(0.5)
     
-    try:
-        async with httpx.AsyncClient(timeout=timeout) as client:
-            response = await client.get(
-                f"https://openrouter.ai/api/v1/generation?id={generation_id}",
-                headers=headers
-            )
-            if response.status_code == 200:
-                data = response.json()
-                return data.get('data', {}).get('total_cost')
-    except Exception as e:
-        print(f"Error fetching generation cost: {e}")
+    for attempt in range(2):
+        try:
+            async with httpx.AsyncClient(timeout=timeout) as client:
+                response = await client.get(
+                    f"https://openrouter.ai/api/v1/generation?id={generation_id}",
+                    headers=headers
+                )
+                if response.status_code == 200:
+                    data = response.json()
+                    cost = data.get('data', {}).get('total_cost')
+                    if cost is not None:
+                        return cost
+        except Exception as e:
+            if attempt == 1:
+                print(f"Error fetching generation cost: {e}")
+        
+        if attempt == 0:
+            await asyncio.sleep(0.5)
+            
     return None
 
 

@@ -112,11 +112,11 @@ async def query_model(
     except httpx.HTTPStatusError as e:
         print(f"Error querying model {model}: HTTP {e.response.status_code} - {e.response.text}")
         return None
-    except httpx.TimeoutException as e:
+    except httpx.TimeoutException:
         print(f"Error querying model {model}: Request timed out after {timeout}s")
         return None
-    except Exception as e:
-        print(f"Error querying model {model}: {type(e).__name__}: {str(e)}")
+    except Exception as error:
+        print(f"Error querying model {model}: {type(error).__name__}: {str(error)}")
         return None
 
 
@@ -125,7 +125,7 @@ async def query_models_streaming(
     messages: List[Dict[str, str]],
     timeout: float = 120.0,
     web_search: bool = False,
-    web_search_models: set = None
+    web_search_models: Optional[set] = None
 ):
     """
     Query multiple models in parallel, yielding results as each model completes.
@@ -174,7 +174,7 @@ async def query_models_parallel(
     messages: List[Dict[str, str]],
     timeout: float = 120.0,
     web_search: bool = False,
-    web_search_models: set = None
+    web_search_models: Optional[set] = None
 ) -> Dict[str, Optional[Dict[str, Any]]]:
     """
     Query multiple models in parallel.

@@ -5,15 +5,33 @@ import './ModelBar.css';
 function ModelBar() {
   const [models, setModels] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [buttonMode, setButtonMode] = useState('Clear'); // 'Clear' or 'Set'
 
   useEffect(() => {
     loadModels();
   }, []);
 
+  const calculateButtonMode = (modelsList) => {
+    const anyEnabled = modelsList.some(m => m.enabled);
+    if (!anyEnabled) {
+      return 'Set';
+    }
+    const nonExpensiveModels = modelsList.filter(m => !m.expensive);
+    const expensiveModels = modelsList.filter(m => m.expensive);
+    const allNonExpensiveEnabled = nonExpensiveModels.length > 0 && nonExpensiveModels.every(m => m.enabled);
+    const anyExpensiveDisabled = expensiveModels.some(m => !m.enabled);
+    
+    if (allNonExpensiveEnabled && anyExpensiveDisabled) {
+      return '💰';
+    }
+    return 'Clear';
+  };
+
   const loadModels = async () => {
     try {
       const data = await api.getModels();
       setModels(data);
+      setButtonMode(calculateButtonMode(data));
     } catch (error) {
       console.error('Failed to load models:', error);
     } finally {
@@ -33,11 +51,59 @@ function ModelBar() {
       }
 
       await api.toggleModel(model, !currentEnabled);
-      setModels(prevModels => prevModels.map(m =>
-        m.model === model ? { ...m, enabled: !currentEnabled } : m
-      ));
+      setModels(prevModels => {
+        const updatedModels = prevModels.map(m =>
+          m.model === model ? { ...m, enabled: !currentEnabled } : m
+        );
+        setButtonMode(calculateButtonMode(updatedModels));
+        return updatedModels;
+      });
     } catch (error) {
       console.error('Failed to update model state:', error);
+    }
+  };
+
+  const handleClearSet = async () => {
+    try {
+      if (buttonMode === 'Clear') {
+        // Disable all models
+        await Promise.all(
+          models.map(m => api.toggleModel(m.model, false))
+        );
+        setModels(prevModels => {
+          const updatedModels = prevModels.map(m => ({ ...m, enabled: false }));
+          setButtonMode(calculateButtonMode(updatedModels));
+          return updatedModels;
+        });
+      } else if (buttonMode === 'Set') {
+        // Enable only non-expensive models
+        await Promise.all(
+          models.map(m => api.toggleModel(m.model, !m.expensive))
+        );
+        setModels(prevModels => {
+          const updatedModels = prevModels.map(m => ({
+            ...m,
+            enabled: !m.expensive
+          }));
+          setButtonMode(calculateButtonMode(updatedModels));
+          return updatedModels;
+        });
+      } else if (buttonMode === '💰') {
+        // Enable expensive models (non-expensive already enabled)
+        await Promise.all(
+          models.filter(m => m.expensive).map(m => api.toggleModel(m.model, true))
+        );
+        setModels(prevModels => {
+          const updatedModels = prevModels.map(m => ({
+            ...m,
+            enabled: true
+          }));
+          setButtonMode(calculateButtonMode(updatedModels));
+          return updatedModels;
+        });
+      }
+    } catch (error) {
+      console.error('Failed to update all models:', error);
     }
   };
 
@@ -70,6 +136,18 @@ function ModelBar() {
 
   return (
     <div className="model-bar">
+      <button
+        type="button"
+        className="clear-set-button"
+        onClick={handleClearSet}
+        title={
+          buttonMode === 'Clear' ? 'Disable all models' :
+          buttonMode === '💰' ? 'Enable expensive models' :
+          'Enable all non-expensive models'
+        }
+      >
+        {buttonMode}
+      </button>
       {models.map(({ model, enabled, notes, expensive, can_browse: canBrowse, can_code: canCode, is_chairman: isChairman }) => (
         <button
           type="button"

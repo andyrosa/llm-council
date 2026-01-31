@@ -7,6 +7,31 @@
   border-bottom: 1px solid #e0e0e0;
 }
 
+.clear-set-button {
+  padding: 7px 14px;
+  border: 2px solid #2563eb;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s, box-shadow 0.2s, transform 0.2s;
+  background: #ffffff;
+  color: #2563eb;
+  min-width: 60px;
+}
+
+.clear-set-button:hover {
+  background: #2563eb;
+  color: #ffffff;
+  transform: translateY(-1px);
+  box-shadow: 0 3px 10px rgba(37, 99, 235, 0.3);
+}
+
+.clear-set-button:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+}
+
 .model-toggle {
   display: inline-flex;
   align-items: center;

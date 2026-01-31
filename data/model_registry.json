@@ -5,7 +5,7 @@
       "expensive": true,
       "capabilities": {
         "can_browse": false,
-        "coding": false
+        "coding_optimized": false
       }
     },
     {
@@ -13,7 +13,7 @@
       "expensive": false,
       "capabilities": {
         "can_browse": false,
-        "coding": false
+        "coding_optimized": false
       }
     },
     {
@@ -22,7 +22,7 @@
       "expensive": true,
       "capabilities": {
         "can_browse": false,
-        "coding": false
+        "coding_optimized": false
       }
     },
     {
@@ -30,7 +30,7 @@
       "expensive": false,
       "capabilities": {
         "can_browse": false,
-        "coding": true
+        "coding_optimized": true
       }
     },
     {
@@ -38,7 +38,7 @@
       "expensive": false,
       "capabilities": {
         "can_browse": true,
-        "coding": true
+        "coding_optimized": true
       }
     },
     {
@@ -46,7 +46,7 @@
       "expensive": false,
       "capabilities": {
         "can_browse": true,
-        "coding": false
+        "coding_optimized": false
       }
     },
     {
@@ -54,7 +54,7 @@
       "expensive": false,
       "capabilities": {
         "can_browse": true,
-        "coding": false
+        "coding_optimized": false
       }
     },
     {
@@ -62,7 +62,15 @@
       "expensive": false,
       "capabilities": {
         "can_browse": false,
-        "coding": false
+        "coding_optimized": false
+      }
+    },
+    {
+      "id": "moonshotai/kimi-k2.5",
+      "expensive": false,
+      "capabilities": {
+        "can_browse": false,
+        "coding_optimized": false
       }
     },
     {
@@ -70,7 +78,7 @@
       "expensive": false,
       "capabilities": {
         "can_browse": true,
-        "coding": false
+        "coding_optimized": false
       }
     },
     {
@@ -78,7 +86,7 @@
       "expensive": false,
       "capabilities": {
         "can_browse": false,
-        "coding": true
+        "coding_optimized": true
       }
     },
     {
@@ -86,7 +94,7 @@
       "expensive": false,
       "capabilities": {
         "can_browse": true,
-        "coding": false
+        "coding_optimized": false
       }
     },
     {
@@ -94,7 +102,7 @@
       "expensive": false,
       "capabilities": {
         "can_browse": true,
-        "coding": false
+        "coding_optimized": false
       }
     },
     {
@@ -102,7 +110,7 @@
       "expensive": false,
       "capabilities": {
         "can_browse": false,
-        "coding": false
+        "coding_optimized": false
       }
     }
   ]

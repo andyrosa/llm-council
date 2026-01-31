@@ -227,6 +227,7 @@ async def send_message_stream(conversation_id: str, request: SendMessageRequest)
             stage1_results = []
             stage2_results = []
             label_to_model = {}
+            aggregate_rankings = None
             
             if request.majority_mode:
                 # Streaming mode with majority detection
@@ -379,7 +380,7 @@ def get_models_snapshot():
                 can_browse = capabilities.get("web_search")
             if can_browse:
                 browse_capable_models.add(model_id)
-            can_code = capabilities.get("coding")
+            can_code = capabilities.get("coding_optimized")
             if can_code:
                 coding_capable_models.add(model_id)
     models_state = model_state.get("models") if isinstance(model_state, dict) else {}

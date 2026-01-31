@@ -137,7 +137,7 @@ def get_coding_capable_models() -> set:
             continue
         capabilities = entry.get("capabilities") or {}
         if isinstance(capabilities, dict):
-            if capabilities.get("coding"):
+            if capabilities.get("coding_optimized"):
                 coding_capable.add(model_id)
     return coding_capable
 

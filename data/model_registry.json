@@ -112,6 +112,22 @@
         "can_browse": false,
         "coding_optimized": false
       }
+    },
+    {
+      "id": "anthropic/claude-opus-4.6",
+      "expensive": true,
+      "capabilities": {
+        "can_browse": false,
+        "coding_optimized": false
+      }
+    },
+    {
+      "id": "openai/gpt-5.3",
+      "expensive": false,
+      "capabilities": {
+        "can_browse": true,
+        "coding_optimized": false
+      }
     }
   ]
 }

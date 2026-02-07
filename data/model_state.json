@@ -5,51 +5,54 @@
       "enabled": false
     },
     "anthropic/claude-sonnet-4.5": {
-      "enabled": true
+      "enabled": false
     },
     "google/gemini-3-pro-preview": {
-      "enabled": true
+      "enabled": false
     },
     "moonshotai/kimi-k2-thinking": {
-      "enabled": true
+      "enabled": false
     },
     "openai/gpt-5-pro": {
       "enabled": false
     },
     "openai/gpt-5.1": {
-      "enabled": true
+      "enabled": false
     },
     "openai/gpt-5.2": {
-      "enabled": true
+      "enabled": false
     },
     "openai/gpt-5.1-codex": {
       "enabled": true
     },
     "x-ai/grok-4": {
-      "enabled": true
+      "enabled": false
     },
     "x-ai/grok-4-fast": {
-      "enabled": true
+      "enabled": false
     },
     "x-ai/grok-4.1-fast": {
-      "enabled": true
+      "enabled": false
     },
     "x-ai/grok-code-fast-1": {
-      "enabled": true
+      "enabled": false
     },
     "openai/gpt-5.1-codex-max": {
-      "enabled": true
+      "enabled": false
     },
     "google/gemini-3-flash-preview": {
-      "enabled": true
+      "enabled": false
     },
     "moonshotai/kimi-k2.5": {
-      "enabled": true
+      "enabled": false
     },
     "anthropic/claude-opus-4.6": {
-      "enabled": true
+      "enabled": false
     },
     "openai/gpt-5.3": {
+      "enabled": false
+    },
+    "openai/gpt-5.2-codex": {
       "enabled": false
     }
   }

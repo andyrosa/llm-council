@@ -36,6 +36,7 @@ class ModelRegistryEntry(TypedDict):
     id: str
     notes: Optional[str]
     expensive: Optional[bool]
+    obsolete_og: Optional[bool]
     capabilities: Dict[str, object]
 
 
@@ -87,10 +88,14 @@ def load_model_registry() -> List[ModelRegistryEntry]:
         capabilities = entry.get("capabilities") or {}
         if not isinstance(capabilities, dict):
             capabilities = {}
+        obsolete_og = entry.get("obsolete_og")
+        if not isinstance(obsolete_og, bool):
+            obsolete_og = None
         models.append({
             "id": model_id,
             "notes": entry.get("notes"),
             "expensive": entry.get("expensive"),
+            "obsolete_og": obsolete_og,
             "capabilities": capabilities,
         })
 

@@ -60,6 +60,12 @@
   border-color: #d7d7d7;
 }
 
+.model-toggle.disabled.is-chairman {
+  background: linear-gradient(90deg, #1e873d 0 32px, #f9f9f9 32px);
+  border-color: #c5d9cc;
+  color: #4b5563;
+}
+
 .model-toggle:hover {
   transform: translateY(-1px);
   box-shadow: 0 3px 10px rgba(31, 41, 51, 0.12);
@@ -122,7 +128,7 @@
 }
 
 .model-toggle.disabled .model-chairman-icon {
-  color: #9ca3af;
+  color: #fde68a;
 }
 
 .model-expensive-icon {

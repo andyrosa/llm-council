@@ -41,6 +41,9 @@ else:
 
 app = FastAPI(title="LLM Council API")
 
+OBSOLETE_OG_NOTE = "OG model is obsolete"
+NOTES_JOINER = " | "
+
 # Enable CORS for local development
 app.add_middleware(
     CORSMiddleware,
@@ -365,12 +368,15 @@ def get_models_snapshot():
     browse_capable_models = set()
     coding_capable_models = set()
     expensive_models = set()
+    obsolete_og_models = set()
     for entry in registry_entries:
         model_id = entry.get("id")
         if not isinstance(model_id, str):
             continue
         if entry.get("notes"):
             notes[model_id] = entry["notes"]
+        if entry.get("obsolete_og"):
+            obsolete_og_models.add(model_id)
         if entry.get("expensive"):
             expensive_models.add(model_id)
         capabilities = entry.get("capabilities") or {}
@@ -406,10 +412,16 @@ def get_models_snapshot():
             "can_browse": model in browse_capable_models,
             "can_code": model in coding_capable_models,
             "expensive": model in expensive_models,
+            "obsolete_og": model in obsolete_og_models,
             "is_chairman": model == active_chairman,
         }
+        note_parts = []
         if model in notes:
-            entry["notes"] = notes[model]
+            note_parts.append(notes[model])
+        if model in obsolete_og_models:
+            note_parts.append(OBSOLETE_OG_NOTE)
+        if note_parts:
+            entry["notes"] = NOTES_JOINER.join(note_parts)
 
         result.append(entry)
 
@@ -478,6 +490,7 @@ async def add_model(request: Dict[str, str]):
         "id": model,
         "notes": None,
         "expensive": None,
+        "obsolete_og": None,
         "capabilities": {},
     }
     notes_value = request.get("notes")

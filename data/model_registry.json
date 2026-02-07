@@ -58,6 +58,15 @@
       }
     },
     {
+      "id": "openai/gpt-5.1",
+      "expensive": false,
+      "obsolete_og": true,
+      "capabilities": {
+        "can_browse": false,
+        "coding_optimized": false
+      }
+    },
+    {
       "id": "openai/gpt-5.1-codex-max",
       "expensive": false,
       "capabilities": {

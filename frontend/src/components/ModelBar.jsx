@@ -12,12 +12,13 @@ function ModelBar() {
   }, []);
 
   const calculateButtonMode = (modelsList) => {
+    const eligibleModels = modelsList.filter(m => !m.obsolete_og);
     const anyEnabled = modelsList.some(m => m.enabled);
     if (!anyEnabled) {
       return 'Set';
     }
-    const nonExpensiveModels = modelsList.filter(m => !m.expensive);
-    const expensiveModels = modelsList.filter(m => m.expensive);
+    const nonExpensiveModels = eligibleModels.filter(m => !m.expensive);
+    const expensiveModels = eligibleModels.filter(m => m.expensive);
     const allNonExpensiveEnabled = nonExpensiveModels.length > 0 && nonExpensiveModels.every(m => m.enabled);
     const anyExpensiveDisabled = expensiveModels.some(m => !m.enabled);
     
@@ -77,27 +78,31 @@ function ModelBar() {
         });
       } else if (buttonMode === 'Set') {
         // Enable only non-expensive models
+        const eligibleModels = models.filter(m => !m.obsolete_og);
         await Promise.all(
-          models.map(m => api.toggleModel(m.model, !m.expensive))
+          eligibleModels.map(m => api.toggleModel(m.model, !m.expensive))
         );
         setModels(prevModels => {
-          const updatedModels = prevModels.map(m => ({
-            ...m,
-            enabled: !m.expensive
-          }));
+          const updatedModels = prevModels.map(m => (
+            m.obsolete_og
+              ? m
+              : { ...m, enabled: !m.expensive }
+          ));
           setButtonMode(calculateButtonMode(updatedModels));
           return updatedModels;
         });
       } else if (buttonMode === '💰') {
         // Enable expensive models (non-expensive already enabled)
+        const eligibleModels = models.filter(m => !m.obsolete_og && m.expensive);
         await Promise.all(
-          models.filter(m => m.expensive).map(m => api.toggleModel(m.model, true))
+          eligibleModels.map(m => api.toggleModel(m.model, true))
         );
         setModels(prevModels => {
-          const updatedModels = prevModels.map(m => ({
-            ...m,
-            enabled: true
-          }));
+          const updatedModels = prevModels.map(m => (
+            m.obsolete_og
+              ? m
+              : { ...m, enabled: true }
+          ));
           setButtonMode(calculateButtonMode(updatedModels));
           return updatedModels;
         });
@@ -141,18 +146,22 @@ function ModelBar() {
         className="clear-set-button"
         onClick={handleClearSet}
         title={
-          buttonMode === 'Clear' ? 'Disable all models' :
+          buttonMode === 'Clear' ? 'Clear all models' :
           buttonMode === '💰' ? 'Enable expensive models' :
-          'Enable all non-expensive models'
+          'Set most models'
         }
       >
-        {buttonMode}
+        {buttonMode === 'Clear'
+          ? 'Clear all'
+          : buttonMode === '💰'
+          ? '💰 Set expensive'
+          : 'Set most'}
       </button>
       {models.map(({ model, enabled, notes, expensive, can_browse: canBrowse, can_code: canCode, is_chairman: isChairman }) => (
         <button
           type="button"
           key={model}
-          className={`model-toggle ${enabled ? 'enabled' : 'disabled'}${notes ? ' has-note' : ''}`}
+          className={`model-toggle ${enabled ? 'enabled' : 'disabled'}${isChairman ? ' is-chairman' : ''}${notes ? ' has-note' : ''}`}
           onClick={(event) => handleToggle(event, model, enabled)}
           title={buildTitle(model, notes, canBrowse, canCode, isChairman)}
         >

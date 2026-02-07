@@ -14,7 +14,6 @@ wheels/
 
 # Data files
 data/conversations/
-data/model_state.json
 
 # Frontend
 frontend/node_modules/

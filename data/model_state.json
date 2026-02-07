@@ -1,0 +1,56 @@
+{
+  "chairman": "anthropic/claude-opus-4.6",
+  "models": {
+    "anthropic/claude-opus-4.5": {
+      "enabled": false
+    },
+    "anthropic/claude-sonnet-4.5": {
+      "enabled": true
+    },
+    "google/gemini-3-pro-preview": {
+      "enabled": true
+    },
+    "moonshotai/kimi-k2-thinking": {
+      "enabled": true
+    },
+    "openai/gpt-5-pro": {
+      "enabled": false
+    },
+    "openai/gpt-5.1": {
+      "enabled": true
+    },
+    "openai/gpt-5.2": {
+      "enabled": true
+    },
+    "openai/gpt-5.1-codex": {
+      "enabled": true
+    },
+    "x-ai/grok-4": {
+      "enabled": true
+    },
+    "x-ai/grok-4-fast": {
+      "enabled": true
+    },
+    "x-ai/grok-4.1-fast": {
+      "enabled": true
+    },
+    "x-ai/grok-code-fast-1": {
+      "enabled": true
+    },
+    "openai/gpt-5.1-codex-max": {
+      "enabled": true
+    },
+    "google/gemini-3-flash-preview": {
+      "enabled": true
+    },
+    "moonshotai/kimi-k2.5": {
+      "enabled": true
+    },
+    "anthropic/claude-opus-4.6": {
+      "enabled": true
+    },
+    "openai/gpt-5.3": {
+      "enabled": false
+    }
+  }
+}

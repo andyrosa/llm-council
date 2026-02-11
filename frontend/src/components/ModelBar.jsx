@@ -15,8 +15,16 @@ function ModelBar() {
     const eligibleModels = modelsList.filter(m => !m.obsolete_og);
     const anyEnabled = modelsList.some(m => m.enabled);
     if (!anyEnabled) {
-      return 'Set';
+      return 'Favorites';
     }
+    const favoritesModels = eligibleModels.filter(m => m.favorites);
+    const allFavoritesEnabled = favoritesModels.length > 0 && favoritesModels.every(m => m.enabled);
+    const anyFavoritesDisabled = favoritesModels.some(m => !m.enabled);
+    
+    if (!allFavoritesEnabled) {
+      return 'Favorites';
+    }
+    
     const nonExpensiveModels = eligibleModels.filter(m => !m.expensive);
     const expensiveModels = eligibleModels.filter(m => m.expensive);
     const allNonExpensiveEnabled = nonExpensiveModels.length > 0 && nonExpensiveModels.every(m => m.enabled);
@@ -76,6 +84,21 @@ function ModelBar() {
           setButtonMode(calculateButtonMode(updatedModels));
           return updatedModels;
         });
+      } else if (buttonMode === 'Favorites') {
+        // Enable only favorites models
+        const eligibleModels = models.filter(m => !m.obsolete_og);
+        await Promise.all(
+          eligibleModels.map(m => api.toggleModel(m.model, m.favorites))
+        );
+        setModels(prevModels => {
+          const updatedModels = prevModels.map(m => (
+            m.obsolete_og
+              ? m
+              : { ...m, enabled: m.favorites }
+          ));
+          setButtonMode(calculateButtonMode(updatedModels));
+          return updatedModels;
+        });
       } else if (buttonMode === 'Set') {
         // Enable only non-expensive models
         const eligibleModels = models.filter(m => !m.obsolete_og);
@@ -117,10 +140,13 @@ function ModelBar() {
     return parts[parts.length - 1];
   };
 
-  const buildTitle = (model, notes, canBrowse, canCode, isChairman) => {
+  const buildTitle = (model, notes, canBrowse, canCode, isChairman, isFavorites) => {
     const extras = [];
     if (notes) {
       extras.push(notes);
+    }
+    if (isFavorites) {
+      extras.push('Favorite model');
     }
     if (canBrowse) {
       extras.push('Can browse web');
@@ -147,23 +173,26 @@ function ModelBar() {
         onClick={handleClearSet}
         title={
           buttonMode === 'Clear' ? 'Clear all models' :
+          buttonMode === 'Favorites' ? 'Enable favorite models' :
           buttonMode === '💰' ? 'Enable expensive models' :
           'Set most models'
         }
       >
         {buttonMode === 'Clear'
           ? 'Clear all'
+          : buttonMode === 'Favorites'
+          ? '⭐ Set favorites'
           : buttonMode === '💰'
           ? '💰 Set expensive'
           : 'Set most'}
       </button>
-      {models.map(({ model, enabled, notes, expensive, can_browse: canBrowse, can_code: canCode, is_chairman: isChairman }) => (
+      {models.map(({ model, enabled, notes, expensive, can_browse: canBrowse, can_code: canCode, is_chairman: isChairman, favorites: isFavorites }) => (
         <button
           type="button"
           key={model}
           className={`model-toggle ${enabled ? 'enabled' : 'disabled'}${isChairman ? ' is-chairman' : ''}${notes ? ' has-note' : ''}`}
           onClick={(event) => handleToggle(event, model, enabled)}
-          title={buildTitle(model, notes, canBrowse, canCode, isChairman)}
+          title={buildTitle(model, notes, canBrowse, canCode, isChairman, isFavorites)}
         >
           {isChairman && (
             <span
@@ -173,6 +202,16 @@ function ModelBar() {
               title="Acts as chairman"
             >
               ⚖
+            </span>
+          )}
+          {isFavorites && (
+            <span
+              className="model-favorites-icon"
+              role="img"
+              aria-label="Favorite model"
+              title="Favorite"
+            >
+              ⭐
             </span>
           )}
           {expensive && (

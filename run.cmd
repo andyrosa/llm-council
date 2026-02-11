@@ -19,7 +19,7 @@ REM Start FastAPI backend: uv run executes uvicorn, which starts the ASGI server
 REM backend.main:app imports the FastAPI app from backend/main.py
 REM --reload enables auto-reloading on code changes, --host 0.0.0.0 listens on all interfaces, --port 8001 sets the port
 echo Starting backend on port 8001...
-start "llm-council-backend" cmd /k "cd /d %~dp0 && uv run uvicorn backend.main:app --reload --host 0.0.0.0 --port 8001"
+start "llm-council-backend" cmd /k "cd /d %~dp0 && uv run python -m uvicorn backend.main:app --reload --host 0.0.0.0 --port 8001"
 REM Use node directly instead of npm run dev because npm's .cmd wrapper changes the window title,
 REM making it impossible to kill by title on restart
 echo Starting frontend (Vite)...

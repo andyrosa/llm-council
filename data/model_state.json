@@ -8,7 +8,7 @@
       "enabled": false
     },
     "google/gemini-3-pro-preview": {
-      "enabled": false
+      "enabled": true
     },
     "moonshotai/kimi-k2-thinking": {
       "enabled": false
@@ -20,7 +20,7 @@
       "enabled": false
     },
     "openai/gpt-5.2": {
-      "enabled": false
+      "enabled": true
     },
     "openai/gpt-5.1-codex": {
       "enabled": true
@@ -44,10 +44,10 @@
       "enabled": false
     },
     "moonshotai/kimi-k2.5": {
-      "enabled": false
+      "enabled": true
     },
     "anthropic/claude-opus-4.6": {
-      "enabled": false
+      "enabled": true
     },
     "openai/gpt-5.3": {
       "enabled": false

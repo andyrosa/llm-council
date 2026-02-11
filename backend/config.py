@@ -96,6 +96,7 @@ def load_model_registry() -> List[ModelRegistryEntry]:
             "notes": entry.get("notes"),
             "expensive": entry.get("expensive"),
             "obsolete_og": obsolete_og,
+            "favorites": bool(entry.get("favorites")),
             "capabilities": capabilities,
         })
 

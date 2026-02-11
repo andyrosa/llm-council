@@ -369,6 +369,7 @@ def get_models_snapshot():
     coding_capable_models = set()
     expensive_models = set()
     obsolete_og_models = set()
+    favorites_models = set()
     for entry in registry_entries:
         model_id = entry.get("id")
         if not isinstance(model_id, str):
@@ -379,6 +380,8 @@ def get_models_snapshot():
             obsolete_og_models.add(model_id)
         if entry.get("expensive"):
             expensive_models.add(model_id)
+        if entry.get("favorites"):
+            favorites_models.add(model_id)
         capabilities = entry.get("capabilities") or {}
         if isinstance(capabilities, dict):
             can_browse = capabilities.get("can_browse")
@@ -414,6 +417,7 @@ def get_models_snapshot():
             "expensive": model in expensive_models,
             "obsolete_og": model in obsolete_og_models,
             "is_chairman": model == active_chairman,
+            "favorites": model in favorites_models,
         }
         note_parts = []
         if model in notes:

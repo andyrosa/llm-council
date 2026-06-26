@@ -12,12 +12,21 @@ function ModelBar() {
   }, []);
 
   const calculateButtonMode = (modelsList) => {
+    const eligibleModels = modelsList.filter(m => !m.obsolete_og);
     const anyEnabled = modelsList.some(m => m.enabled);
     if (!anyEnabled) {
-      return 'Set';
+      return 'Favorites';
     }
-    const nonExpensiveModels = modelsList.filter(m => !m.expensive);
-    const expensiveModels = modelsList.filter(m => m.expensive);
+    const favoritesModels = eligibleModels.filter(m => m.favorites);
+    const allFavoritesEnabled = favoritesModels.length > 0 && favoritesModels.every(m => m.enabled);
+    const anyFavoritesDisabled = favoritesModels.some(m => !m.enabled);
+    
+    if (!allFavoritesEnabled) {
+      return 'Favorites';
+    }
+    
+    const nonExpensiveModels = eligibleModels.filter(m => !m.expensive);
+    const expensiveModels = eligibleModels.filter(m => m.expensive);
     const allNonExpensiveEnabled = nonExpensiveModels.length > 0 && nonExpensiveModels.every(m => m.enabled);
     const anyExpensiveDisabled = expensiveModels.some(m => !m.enabled);
     
@@ -75,29 +84,48 @@ function ModelBar() {
           setButtonMode(calculateButtonMode(updatedModels));
           return updatedModels;
         });
-      } else if (buttonMode === 'Set') {
-        // Enable only non-expensive models
+      } else if (buttonMode === 'Favorites') {
+        // Enable only favorites models
+        const eligibleModels = models.filter(m => !m.obsolete_og);
         await Promise.all(
-          models.map(m => api.toggleModel(m.model, !m.expensive))
+          eligibleModels.map(m => api.toggleModel(m.model, m.favorites))
         );
         setModels(prevModels => {
-          const updatedModels = prevModels.map(m => ({
-            ...m,
-            enabled: !m.expensive
-          }));
+          const updatedModels = prevModels.map(m => (
+            m.obsolete_og
+              ? m
+              : { ...m, enabled: m.favorites }
+          ));
+          setButtonMode(calculateButtonMode(updatedModels));
+          return updatedModels;
+        });
+      } else if (buttonMode === 'Set') {
+        // Enable only non-expensive models
+        const eligibleModels = models.filter(m => !m.obsolete_og);
+        await Promise.all(
+          eligibleModels.map(m => api.toggleModel(m.model, !m.expensive))
+        );
+        setModels(prevModels => {
+          const updatedModels = prevModels.map(m => (
+            m.obsolete_og
+              ? m
+              : { ...m, enabled: !m.expensive }
+          ));
           setButtonMode(calculateButtonMode(updatedModels));
           return updatedModels;
         });
       } else if (buttonMode === '💰') {
         // Enable expensive models (non-expensive already enabled)
+        const eligibleModels = models.filter(m => !m.obsolete_og && m.expensive);
         await Promise.all(
-          models.filter(m => m.expensive).map(m => api.toggleModel(m.model, true))
+          eligibleModels.map(m => api.toggleModel(m.model, true))
         );
         setModels(prevModels => {
-          const updatedModels = prevModels.map(m => ({
-            ...m,
-            enabled: true
-          }));
+          const updatedModels = prevModels.map(m => (
+            m.obsolete_og
+              ? m
+              : { ...m, enabled: true }
+          ));
           setButtonMode(calculateButtonMode(updatedModels));
           return updatedModels;
         });
@@ -112,10 +140,13 @@ function ModelBar() {
     return parts[parts.length - 1];
   };
 
-  const buildTitle = (model, notes, canBrowse, canCode, isChairman) => {
+  const buildTitle = (model, notes, canBrowse, canCode, isChairman, isFavorites) => {
     const extras = [];
     if (notes) {
       extras.push(notes);
+    }
+    if (isFavorites) {
+      extras.push('Favorite model');
     }
     if (canBrowse) {
       extras.push('Can browse web');
@@ -141,20 +172,27 @@ function ModelBar() {
         className="clear-set-button"
         onClick={handleClearSet}
         title={
-          buttonMode === 'Clear' ? 'Disable all models' :
+          buttonMode === 'Clear' ? 'Clear all models' :
+          buttonMode === 'Favorites' ? 'Enable favorite models' :
           buttonMode === '💰' ? 'Enable expensive models' :
-          'Enable all non-expensive models'
+          'Set most models'
         }
       >
-        {buttonMode}
+        {buttonMode === 'Clear'
+          ? 'Clear all'
+          : buttonMode === 'Favorites'
+          ? '⭐ Set favorites'
+          : buttonMode === '💰'
+          ? '💰 Set expensive'
+          : 'Set most'}
       </button>
-      {models.map(({ model, enabled, notes, expensive, can_browse: canBrowse, can_code: canCode, is_chairman: isChairman }) => (
+      {models.map(({ model, enabled, notes, expensive, can_browse: canBrowse, can_code: canCode, is_chairman: isChairman, favorites: isFavorites }) => (
         <button
           type="button"
           key={model}
-          className={`model-toggle ${enabled ? 'enabled' : 'disabled'}${notes ? ' has-note' : ''}`}
+          className={`model-toggle ${enabled ? 'enabled' : 'disabled'}${isChairman ? ' is-chairman' : ''}${notes ? ' has-note' : ''}`}
           onClick={(event) => handleToggle(event, model, enabled)}
-          title={buildTitle(model, notes, canBrowse, canCode, isChairman)}
+          title={buildTitle(model, notes, canBrowse, canCode, isChairman, isFavorites)}
         >
           {isChairman && (
             <span
@@ -164,6 +202,16 @@ function ModelBar() {
               title="Acts as chairman"
             >
               ⚖
+            </span>
+          )}
+          {isFavorites && (
+            <span
+              className="model-favorites-icon"
+              role="img"
+              aria-label="Favorite model"
+              title="Favorite"
+            >
+              ⭐
             </span>
           )}
           {expensive && (

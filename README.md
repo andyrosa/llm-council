@@ -37,7 +37,7 @@ cd ..
 Create a `.env` file in the project root:
 
 ```bash
-OPENROUTER_API_KEY=sk-or-v1-...
+DFC_OPENROUTER_API_KEY=sk-or-v1-...
 ```
 
 Get your API key at [openrouter.ai](https://openrouter.ai/). Make sure to purchase the credits you need, or sign up for automatic top up.

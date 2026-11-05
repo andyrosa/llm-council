@@ -4,7 +4,7 @@ import httpx
 import time
 import asyncio
 from typing import List, Dict, Any, Optional
-from .config import OPENROUTER_API_KEY, OPENROUTER_API_URL
+from .config import DFC_OPENROUTER_API_KEY, OPENROUTER_API_URL
 
 
 async def get_generation_cost(generation_id: str, timeout: float = 2.0) -> Optional[float]:
@@ -19,7 +19,7 @@ async def get_generation_cost(generation_id: str, timeout: float = 2.0) -> Optio
         Cost in dollars, or None if unavailable
     """
     headers = {
-        "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+        "Authorization": f"Bearer {DFC_OPENROUTER_API_KEY}",
     }
     
     # Wait a moment for stats to be available
@@ -66,7 +66,7 @@ async def query_model(
         Response dict with 'content', 'elapsed_time', 'cost', and optional 'reasoning_details', or None if failed
     """
     headers = {
-        "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+        "Authorization": f"Bearer {DFC_OPENROUTER_API_KEY}",
         "Content-Type": "application/json",
     }
 

@@ -9,7 +9,7 @@ import time
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 
 import httpx
-from backend.config import OPENROUTER_API_KEY, OPENROUTER_API_URL, load_model_registry
+from backend.config import DFC_OPENROUTER_API_KEY, OPENROUTER_API_URL, load_model_registry
 
 CANARY_REPO, CANARY_BRANCH = "https://github.com/torvalds/linux", "master"
 TEST_PROMPT = f"What is the full 40-character SHA of the most recent commit on {CANARY_BRANCH} of {CANARY_REPO}? Reply with ONLY the SHA."
@@ -24,8 +24,8 @@ def get_actual_sha() -> str:
 
 
 async def probe_model(model: str, actual_sha: str) -> dict:
-    if not OPENROUTER_API_KEY:
-        raise RuntimeError("OPENROUTER_API_KEY not configured")
+    if not DFC_OPENROUTER_API_KEY:
+        raise RuntimeError("DFC_OPENROUTER_API_KEY not configured")
     payload = {
         "model": model,
         "messages": [{"role": "user", "content": TEST_PROMPT}],
@@ -35,7 +35,7 @@ async def probe_model(model: str, actual_sha: str) -> dict:
     try:
         async with httpx.AsyncClient(timeout=120.0) as client:
             resp = await client.post(OPENROUTER_API_URL,
-                headers={"Authorization": f"Bearer {OPENROUTER_API_KEY}", "Content-Type": "application/json"},
+                headers={"Authorization": f"Bearer {DFC_OPENROUTER_API_KEY}", "Content-Type": "application/json"},
                 json=payload)
     except Exception as e:
         return {"model": model, "result": str(e)[:40], "match": False, "time": time.perf_counter() - start}

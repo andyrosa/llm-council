@@ -22,7 +22,7 @@ from .council import (
     stage2_collect_rankings_streaming,
 )
 from .config import (
-    OPENROUTER_API_KEY,
+    DFC_OPENROUTER_API_KEY,
     COUNCIL_MODELS,
     get_all_models,
     load_model_registry,
@@ -33,10 +33,10 @@ from .config import (
     ModelRegistryEntry,
 )
 
-if OPENROUTER_API_KEY:
-    print("OPENROUTER_API_KEY found")
+if DFC_OPENROUTER_API_KEY:
+    print("DFC_OPENROUTER_API_KEY found")
 else:
-    print("OPENROUTER_API_KEY not found; quitting")
+    print("DFC_OPENROUTER_API_KEY not found; quitting")
     sys.exit(1)
 
 app = FastAPI(title="LLM Council API")
